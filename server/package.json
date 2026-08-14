@@ -1,6 +1,13 @@
 {
+  "scripts": {
+    "start": "node server.js",
+    "db:init": "node scripts/init-db.cjs"
+  },
   "dependencies": {
     "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mongodb": "^7.5.0",
     "node": "^26.7.0"
-  }
+  },
+  "type": "module"
 }
