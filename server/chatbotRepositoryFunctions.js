@@ -41,7 +41,7 @@ class chatbotRepositoryFunctions {
         if (!user) {
             return { "authenticated": false, "message": "Invalid username or password" };
         }
-        return { "authenticated": true, "message": "Successfully logged in", "id": user.id };
+        return { "authenticated": true, "message": "Successfully logged in", "id": user.id, "username": user.username };
     }
 
     async addTask(userId, newTask) {
@@ -64,7 +64,12 @@ class chatbotRepositoryFunctions {
     }
 
     async markTaskCompleted(taskId) {
-
+        const result = await taskCollection.updateOne(
+            { id: taskId },
+            { $set: { completed: true } }
+        );
+        const updatedTask = await taskCollection.findOne({ id: taskId });
+        return updatedTask;
     }
 
     async getNextUserId() {

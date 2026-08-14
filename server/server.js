@@ -70,6 +70,23 @@ app.post('/users/:id/tasks', async (req, res) => {
         return res.status(201).json(taskAdded);
 });
 
+app.patch('/tasks/:id/complete', async (req, res) => {
+    const taskId = Number(req.params.id);
+    if (!Number.isInteger(taskId) || taskId < 1) {
+        return res.status(400).json({ error: 'Invalid task ID' });
+    }
+    try {
+        const updatedTask = await chatbotRepositoryFunctions.markTaskCompleted(taskId);
+        if (!updatedTask) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        return res.status(200).json(updatedTask);
+    } catch (error) {
+        console.error('PATCH /tasks/:id/complete failed:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 //need to write PATCH /tasks/:id/complete
 
 
