@@ -1,37 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { registerUser } from '../util/registerApi.ts'
 import './Register.css'
-
-type RegisterResult = {
-  ok: boolean
-  message: string
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-async function mockRegister(
-  username: string,
-  password: string,
-  role: string,
-  department: string,
-): Promise<RegisterResult> {
-  await wait(700)
-
-  if (!username.trim() || !password.trim() || !role.trim() || !department.trim()) {
-    return { ok: false, message: 'Please complete all fields before registering.' }
-  }
-
-  if (username.toLowerCase() === 'taken') {
-    return { ok: false, message: 'That username is already taken. Try another one.' }
-  }
-
-  return { ok: true, message: 'Temporary registration successful. Redirecting to plan...' }
-}
 
 function RegisterRoute() {
   const navigate = useNavigate()
@@ -48,7 +19,7 @@ function RegisterRoute() {
     setIsSubmitting(true)
     setStatusMessage('')
 
-    const result = await mockRegister(username, password, role, department)
+    const result = await registerUser(username, password, role, department)
 
     setIsSubmitting(false)
     setStatusMessage(result.message)
@@ -72,7 +43,7 @@ function RegisterRoute() {
       <main className="register-panel">
         <h1>Register</h1>
         <p className="register-help">
-          Create your new hire account. This is temporary until backend APIs are connected.
+          Create your new hire account.
         </p>
 
         <form className="register-form" onSubmit={handleSubmit}>

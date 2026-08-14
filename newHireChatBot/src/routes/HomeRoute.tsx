@@ -7,10 +7,6 @@ function HomeRoute() {
   const [mode, setMode] = useState<'dark' | 'light'>('dark')
   const navigate = useNavigate()
 
-  function handleComingSoon(feature: string) {
-    window.alert(`${feature} page is coming next.`)
-  }
-
   function handleToggleTheme() {
     setMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'))
   }
@@ -27,7 +23,7 @@ function HomeRoute() {
         </p>
 
         <div className="landing-actions" aria-label="Landing actions">
-          <button type="button" onClick={() => handleComingSoon('Plan')}>
+          <button type="button" onClick={() => navigate('/plan')}>
             Plan
           </button>
           <button type="button" onClick={() => navigate('/login')}>
