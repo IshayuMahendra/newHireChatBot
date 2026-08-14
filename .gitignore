@@ -6,9 +6,25 @@ node_modules/
 data/db/
 .env
 
+# Inference server local env files
+inference-server/.env
+inference-server/.env.*
+
+# Inference server virtual environment
+inference-server/.venv/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
 # Python cache artifacts
 __pycache__/
 *.py[cod]
 
 # Local Python interpreter pin
 .python-version
+
+

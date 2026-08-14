@@ -1,32 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { loginUser } from '../util/loginApi.ts'
 import './Login.css'
-
-type LoginResult = {
-  ok: boolean
-  message: string
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-async function mockLogin(username: string, password: string): Promise<LoginResult> {
-  await wait(600)
-
-  if (!username.trim() || !password.trim()) {
-    return { ok: false, message: 'Please enter both username and password.' }
-  }
-
-  if (username.toLowerCase() === 'error' || password.toLowerCase() === 'wrong') {
-    return { ok: false, message: 'Invalid credentials. Try a different value.' }
-  }
-
-  return { ok: true, message: 'Temporary login successful.' }
-}
 
 function LoginRoute() {
   const navigate = useNavigate()
@@ -41,15 +17,21 @@ function LoginRoute() {
     setIsSubmitting(true)
     setStatusMessage('')
 
-    const result = await mockLogin(username, password)
+    const result = await loginUser(username, password)
 
     setIsSubmitting(false)
     setStatusMessage(result.message)
     setIsError(!result.ok)
 
     if (result.ok) {
+      sessionStorage.setItem('nhcb-authenticated', 'true')
+      sessionStorage.setItem(
+        'nhcb-profile',
+        JSON.stringify({ username: username.trim(), id: result.userId ?? null }),
+      )
+
       setTimeout(() => {
-        navigate('/')
+        navigate('/plan')
       }, 700)
     }
   }
@@ -58,7 +40,7 @@ function LoginRoute() {
     <section className="login-page">
       <main className="login-panel">
         <h1>Login</h1>
-        <p className="login-help">Use temporary values for now while backend endpoints are pending.</p>
+        <p className="login-help">Sign in with your registered username and password.</p>
 
         <form className="login-form" onSubmit={handleSubmit}>
           <label htmlFor="username">Username</label>
