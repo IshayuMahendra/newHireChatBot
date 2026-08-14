@@ -4,3 +4,11 @@ node_modules/
 
 # Local database files
 data/db/
+.env
+
+# Python cache artifacts
+__pycache__/
+*.py[cod]
+
+# Local Python interpreter pin
+.python-version
