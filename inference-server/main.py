@@ -4,7 +4,8 @@ import httpx
 import os
 
 from agent_service import invoke_AskModel, invoke_PlanModel, invoke_PlanModel_structured
-from models import AskModel, PlanForUserModel, PlanModel, PlanStructuredOutput
+from models import AskModel, PlanForUserModel, PlanModel
+from task_payloads import build_task_payloads
 
 # 1. Initialize the application
 app = FastAPI()
@@ -13,23 +14,6 @@ TASKS_API_BASE_URL = os.getenv("TASKS_API_BASE_URL", "http://localhost:3001")
 
 class ChatRequest(BaseModel):
     prompt: str
-
-
-def build_task_payloads(plan_output: PlanStructuredOutput) -> list[str]:
-    phase_buckets = [
-        ("Week 1", plan_output.first_week_tasks),
-        ("Weeks 2-4", plan_output.weeks_2_4_tasks),
-        ("Day 30", plan_output.day_30_outcomes),
-        ("Day 60", plan_output.day_60_outcomes),
-        ("Day 90", plan_output.day_90_outcomes),
-    ]
-    parsed_tasks: list[str] = []
-    for phase_label, items in phase_buckets:
-        for item in items:
-            cleaned_item = item.strip()
-            if cleaned_item:
-                parsed_tasks.append(f"[{phase_label}] {cleaned_item}")
-    return parsed_tasks
 
 # 2. Define a GET endpoint
 @app.get("/")
