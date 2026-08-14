@@ -17,6 +17,8 @@ load_dotenv()
 
 # Future feature 
 
+# Implement a narrative that will be sent to react
+
 # Implement these into Markdown
 ASK_PROMPT_TEMPLATE = PromptTemplate.from_template(
     """# New Hire Assistant
@@ -45,13 +47,20 @@ You are an assistant providing onboarding tasks for new hires.
 - Department: {department}
 
 ## Task
-Generate a practical 30-60-90 day onboarding plan with clear action items.
+Create a simplified onboarding plan that feels continuous and easy to follow.
 
 ## Output format
-- Day 30: focus areas and concrete tasks
-- Day 60: focus areas and concrete tasks
-- Day 90: focus areas and concrete tasks
-- Include measurable outcomes for each phase
+Use this exact structure:
+1) First Week (3-5 tasks)
+2) Weeks 2-4 (4-6 tasks)
+3) Day 30 Milestone (2-3 outcomes)
+4) Day 60 Milestone (2-3 outcomes)
+5) Day 90 Milestone (2-3 outcomes)
+
+Guidelines:
+- Keep each bullet short and actionable.
+- Make tasks build naturally from one phase to the next.
+- Avoid duplicate tasks across phases.
 """
 )
 
@@ -65,10 +74,15 @@ You are an assistant providing onboarding tasks for new hires.
 - Department: {department}
 
 ## Task
-Return a 30-60-90 day onboarding plan with specific action items and measurable outcomes.
+Return a simplified and continuous onboarding plan with short, actionable items.
 
 ## Requirement
 Return output that matches the provided structured schema.
+
+## Quality requirements
+- Make the flow progressive from First Week -> Weeks 2-4 -> Day 30 -> Day 60 -> Day 90.
+- Do not repeat the same task in different phases.
+- Keep each item concise and practical.
 """
 )
 
