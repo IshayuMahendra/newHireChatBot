@@ -15,8 +15,25 @@ class chatbotRepositoryFunctions {
         return newUser;
     }
 
+    async getUserByUsername(username) {
+        return await userCollection.findOne({ username });
+    }
+
     async getUserTasks(userId) {
-        return await taskCollection.find({ userId }).toArray();
+        const user = await userCollection.findOne({ id: userId });
+        if (!user) {
+            return null;
+        }
+
+        return await taskCollection
+            .find({
+                $or: [
+                    { userId },
+                    { userId: user._id }
+                ]
+            })
+            .sort({ id: 1, _id: 1 })
+            .toArray();
     }
 
     async loginUser(username, password) {
@@ -24,11 +41,30 @@ class chatbotRepositoryFunctions {
         if (!user) {
             return { "authenticated": false, "message": "Invalid username or password" };
         }
-        return { "authenticated": true, "message": "Successfully logged in" };
+        return { "authenticated": true, "message": "Successfully logged in", "id": user.id };
     }
 
     async addTask(userId, newTask) {
         const user = await userCollection.findOne({ id: userId });
+        if (!user) {
+            return null;
+        }
+        const taskId = await this.getNextTaskId();
+        const completed = typeof newTask.completed === 'boolean' ? newTask.completed : false;
+        const taskToInsert = {
+            ...newTask,
+            id: taskId,
+            userId: user._id,
+            completed,
+            createdAt: newTask.createdAt ? new Date(newTask.createdAt) : new Date()
+        };
+
+        await taskCollection.insertOne(taskToInsert);
+        return taskToInsert;
+    }
+
+    async markTaskCompleted(taskId) {
+
     }
 
     async getNextUserId() {
@@ -37,6 +73,13 @@ class chatbotRepositoryFunctions {
             return 1;
         }
         return topUser[0].id + 1;
+    }
+    async getNextTaskId() {
+        const topTask = await taskCollection.find().sort({ id: -1 }).limit(1).toArray();
+        if (topTask.length === 0) {
+            return 1;
+        }
+        return topTask[0].id + 1;
     }
 }
 
