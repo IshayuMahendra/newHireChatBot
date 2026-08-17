@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import os
@@ -10,6 +11,17 @@ from task_payloads import build_task_payloads
 # 1. Initialize the application
 app = FastAPI()
 TASKS_API_BASE_URL = os.getenv("TASKS_API_BASE_URL", "http://localhost:3001")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class ChatRequest(BaseModel):

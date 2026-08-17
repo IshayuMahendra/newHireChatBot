@@ -2,6 +2,8 @@ export type RegisterResult = {
   ok: boolean
   message: string
   userId?: number
+  role?: string
+  department?: string
 }
 
 type RegisterPayload = {
@@ -58,6 +60,8 @@ export async function registerUser(
       ok: true,
       message: 'Registration successful. Redirecting to your plan...',
       userId: body.id,
+      role: payload.role,
+      department: payload.department,
     }
   } catch {
     return {

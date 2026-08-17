@@ -5,7 +5,12 @@ import { loginUser } from '../util/loginApi.ts'
 import './Login.css'
 
 type LoginRouteProps = {
-  onLoginSuccess: (username: string, userId?: number) => void
+  onLoginSuccess: (
+    username: string,
+    userId: number | undefined,
+    role: string,
+    department: string,
+  ) => void
 }
 
 function LoginRoute({ onLoginSuccess }: LoginRouteProps) {
@@ -28,7 +33,12 @@ function LoginRoute({ onLoginSuccess }: LoginRouteProps) {
     setIsError(!result.ok)
 
     if (result.ok) {
-      onLoginSuccess(username.trim(), result.userId)
+      onLoginSuccess(
+        username.trim(),
+        result.userId,
+        result.role?.trim() ?? '',
+        result.department?.trim() ?? '',
+      )
 
       setTimeout(() => {
         navigate('/plan')

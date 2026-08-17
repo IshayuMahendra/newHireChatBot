@@ -272,6 +272,19 @@
   color: #ffffff;
 }
 
+.chat-empty-state {
+  margin: 0;
+  color: #5b648c;
+  text-align: center;
+  padding: 8px;
+}
+
+.chat-error {
+  color: #ffe2df;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 .chat-input-row {
   margin-top: 12px;
   display: grid;
@@ -295,6 +308,12 @@
   background: #121c4e;
   color: #ffffff;
   cursor: pointer;
+}
+
+.chat-button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 @media (max-width: 960px) {

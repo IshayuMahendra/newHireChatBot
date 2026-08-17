@@ -9,6 +9,8 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
   const [userId, setUserId] = useState<number | undefined>(undefined)
+  const [role, setRole] = useState('')
+  const [department, setDepartment] = useState('')
 
   return (
     <BrowserRouter>
@@ -22,6 +24,8 @@ function App() {
                 setLoggedIn(false)
                 setUsername('')
                 setUserId(undefined)
+                setRole('')
+                setDepartment('')
               }}
             />
           }
@@ -33,10 +37,12 @@ function App() {
               <Navigate to="/plan" replace />
             ) : (
               <LoginRoute
-                onLoginSuccess={(nextUsername, nextUserId) => {
+                onLoginSuccess={(nextUsername, nextUserId, nextRole, nextDepartment) => {
                   setLoggedIn(true)
                   setUsername(nextUsername)
                   setUserId(nextUserId)
+                  setRole(nextRole)
+                  setDepartment(nextDepartment)
                 }}
               />
             )
@@ -49,10 +55,12 @@ function App() {
               <Navigate to="/plan" replace />
             ) : (
               <RegisterRoute
-                onRegisterSuccess={(nextUsername, nextUserId) => {
+                onRegisterSuccess={(nextUsername, nextUserId, nextRole, nextDepartment) => {
                   setLoggedIn(true)
                   setUsername(nextUsername)
                   setUserId(nextUserId)
+                  setRole(nextRole)
+                  setDepartment(nextDepartment)
                 }}
               />
             )
@@ -62,7 +70,12 @@ function App() {
           path="/plan"
           element={
             loggedIn ? (
-              <PlanRoute username={username} userId={userId} />
+              <PlanRoute
+                username={username}
+                userId={userId}
+                role={role}
+                department={department}
+              />
             ) : (
               <Navigate to="/login" replace />
             )

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { askAssistant } from '../util/askApi.ts'
 import './Plan.css'
 
 type PendingTask = {
@@ -20,6 +22,8 @@ type CompletedTask = {
 type PlanRouteProps = {
   username: string
   userId?: number
+  role: string
+  department: string
 }
 
 type ApiTask = {
@@ -44,12 +48,18 @@ function formatCompletedDate(timestamp?: string): string {
   return parsed.toLocaleString()
 }
 
-function PlanRoute({ username, userId }: PlanRouteProps) {
+function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
   const navigate = useNavigate()
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
   const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([])
   const [loadingTasks, setLoadingTasks] = useState(true)
   const [taskError, setTaskError] = useState('')
+  const [chatInput, setChatInput] = useState('')
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'assistant'; text: string }>>(
+    [],
+  )
+  const [isAsking, setIsAsking] = useState(false)
+  const [chatError, setChatError] = useState('')
 
   useEffect(() => {
     if (!userId) {
@@ -182,6 +192,39 @@ function PlanRoute({ username, userId }: PlanRouteProps) {
     })
   }
 
+  async function handleAsk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const trimmedPrompt = chatInput.trim()
+    if (!trimmedPrompt) {
+      setChatError('Please enter a question before asking.')
+      return
+    }
+
+    setChatError('')
+    setIsAsking(true)
+    setChatInput('')
+
+    setChatMessages((currentMessages) => [
+      ...currentMessages,
+      { sender: 'user', text: trimmedPrompt },
+    ])
+
+    const result = await askAssistant(role, department, trimmedPrompt)
+
+    setIsAsking(false)
+
+    if (!result.ok || !result.response) {
+      setChatError(result.message)
+      return
+    }
+
+    setChatMessages((currentMessages) => [
+      ...currentMessages,
+      { sender: 'assistant', text: result.response ?? '' },
+    ])
+  }
+
   return (
     <section className="plan-shell">
       <header className="plan-header">
@@ -256,19 +299,36 @@ function PlanRoute({ username, userId }: PlanRouteProps) {
         <section className="plan-chat" aria-label="AI chat panel">
           <h2>Assistant Chat</h2>
           <div className="chat-window" role="log" aria-live="polite">
-            <div className="chat-message assistant">
-              Hi! I can help you build your first 30-day onboarding path.
-            </div>
-            <div className="chat-message user">What should I focus on this week?</div>
-            <div className="chat-message assistant">
-              Start with your manager meeting, tool setup, and team intro. Then we can generate
-              your role-specific milestones.
-            </div>
+            {chatMessages.length === 0 ? (
+              <p className="chat-empty-state">Chat messages will appear here.</p>
+            ) : (
+              chatMessages.map((message, index) => (
+                <div key={`${message.sender}-${index}`} className={`chat-message ${message.sender}`}>
+                  {message.text}
+                </div>
+              ))
+            )}
           </div>
 
-          <form className="chat-input-row" onSubmit={(event) => event.preventDefault()}>
-            <input type="text" placeholder="Ask a question..." aria-label="Ask the assistant" />
-            <button type="submit">Send</button>
+          {chatError ? <p className="plan-subtext chat-error">{chatError}</p> : null}
+
+          <form className="chat-input-row" onSubmit={handleAsk}>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(event) => setChatInput(event.target.value)}
+              placeholder="Ask a question..."
+              aria-label="Ask the assistant"
+              disabled={isAsking}
+            />
+            <div className="chat-button-row">
+              <button type="button" disabled={isAsking}>
+                Plan
+              </button>
+              <button type="submit" disabled={isAsking}>
+                {isAsking ? 'Asking...' : 'Ask'}
+              </button>
+            </div>
           </form>
         </section>
       </main>

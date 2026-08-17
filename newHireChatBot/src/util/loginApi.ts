@@ -2,11 +2,14 @@ export type LoginResult = {
   ok: boolean
   message: string
   userId?: number
+  role?: string
+  department?: string
 }
 
 type LoginPayload = {
   username: string
   password: string
+
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -14,10 +17,13 @@ const API_BASE_URL = 'http://localhost:3001'
 export async function loginUser(
   username: string,
   password: string,
+
 ): Promise<LoginResult> {
   const payload: LoginPayload = {
     username: username.trim(),
     password: password.trim(),
+    
+
   }
 
   if (!payload.username || !payload.password) {
@@ -38,6 +44,8 @@ export async function loginUser(
       message?: string
       error?: string
       id?: number
+      role?: string
+      department?: string
     }
 
     if (!response.ok || !body.authenticated) {
@@ -51,6 +59,8 @@ export async function loginUser(
       ok: true,
       message: body.message ?? 'Login successful. Redirecting to plan...',
       userId: body.id,
+      role: body.role,
+      department: body.department,
     }
   } catch {
     return {

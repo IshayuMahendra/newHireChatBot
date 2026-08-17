@@ -5,7 +5,12 @@ import { registerUser } from '../util/registerApi.ts'
 import './Register.css'
 
 type RegisterRouteProps = {
-  onRegisterSuccess: (username: string, userId?: number) => void
+  onRegisterSuccess: (
+    username: string,
+    userId: number | undefined,
+    role: string,
+    department: string,
+  ) => void
 }
 
 function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
@@ -30,7 +35,12 @@ function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
     setIsError(!result.ok)
 
     if (result.ok) {
-      onRegisterSuccess(username.trim(), result.userId)
+      onRegisterSuccess(
+        username.trim(),
+        result.userId,
+        result.role?.trim() ?? role.trim(),
+        result.department?.trim() ?? department.trim(),
+      )
 
       setTimeout(() => {
         navigate('/plan')
