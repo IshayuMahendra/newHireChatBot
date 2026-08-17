@@ -238,33 +238,37 @@ function PlanRoute({
     setIsGeneratingPlan(false)
   }
 
-  async function completeTask(taskId: number) {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/tasks/${taskId}/complete`,
-        {
-          method: 'PATCH',
+  async function completeTask(
+  taskId: number,
+  completed: boolean,
+) {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/tasks/${taskId}/complete`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      )
+        body: JSON.stringify({ completed }),
+      },
+    )
 
-      if (!response.ok) {
-        setTaskError(
-          'Could not update task status in the server.',
-        )
-        return
-      }
-
-      setTaskError('')
-      moveToCompleted(
-        taskId,
-        new Date().toISOString(),
-      )
-    } catch {
+    if (!response.ok) {
       setTaskError(
         'Could not update task status in the server.',
       )
+      return
     }
+
+    setTaskError('')
+    await loadTasks(userId!)
+  } catch {
+    setTaskError(
+      'Could not update task status in the server.',
+    )
   }
+}
 
   function moveToCompleted(
     taskId: number,
@@ -458,15 +462,18 @@ function PlanRoute({
                     key={task.id}
                     className="task-card"
                   >
-                    <label className="task-check-row">
-                      <input
+                   <label className="task-check-row">
+                     <input
                         type="checkbox"
-                        checked={false}
-                        onChange={() =>
-                          void completeTask(task.id)
-                        }
-                        aria-label={`Mark ${task.text} complete`}
-                      />
+                         checked={false}
+                         onChange={(event) =>
+                          void completeTask(
+                            task.id,
+                            event.target.checked,
+                          )
+                          }
+                          aria-label={`Mark ${task.text} complete`}
+                        />
 
                       <span>
                         <strong>{task.phase}</strong>
@@ -528,7 +535,7 @@ function PlanRoute({
                       type="button"
                       className="completed-action-button"
                       onClick={() =>
-                        moveToPending(task.id)
+                        void completeTask(task.id, false)
                       }
                     >
                       Mark as Pending
