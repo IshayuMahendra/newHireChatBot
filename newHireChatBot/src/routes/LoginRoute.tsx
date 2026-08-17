@@ -4,7 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { loginUser } from '../util/loginApi.ts'
 import './Login.css'
 
-function LoginRoute() {
+type LoginRouteProps = {
+  onLoginSuccess: (username: string) => void
+}
+
+function LoginRoute({ onLoginSuccess }: LoginRouteProps) {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -24,11 +28,7 @@ function LoginRoute() {
     setIsError(!result.ok)
 
     if (result.ok) {
-      sessionStorage.setItem('nhcb-authenticated', 'true')
-      sessionStorage.setItem(
-        'nhcb-profile',
-        JSON.stringify({ username: username.trim(), id: result.userId ?? null }),
-      )
+      onLoginSuccess(username.trim())
 
       setTimeout(() => {
         navigate('/plan')

@@ -1,19 +1,26 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ThemeToggleButton from '../components/ThemeToggleButton.tsx'
 import './Home.css'
 
-function HomeRoute() {
-  const [mode, setMode] = useState<'dark' | 'light'>('dark')
+type HomeRouteProps = {
+  loggedIn: boolean
+  onSignOut: () => void
+}
+
+function HomeRoute({ loggedIn, onSignOut }: HomeRouteProps) {
   const navigate = useNavigate()
 
-  function handleToggleTheme() {
-    setMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'))
+  function handleSignOut() {
+    onSignOut()
+    navigate('/')
   }
 
   return (
-    <section className={`landing-shell ${mode === 'light' ? 'landing-shell-light' : ''}`}>
-      <ThemeToggleButton mode={mode} onToggle={handleToggleTheme} />
+    <section className="landing-shell">
+      {loggedIn ? (
+        <button type="button" className="theme-toggle" onClick={handleSignOut}>
+          Sign Out
+        </button>
+      ) : null}
       <h1 className="landing-kicker">ADP Onboarding Assistant</h1>
       <main className="landing-card">
         <h2>Welcome to New Hire ChatBot</h2>
@@ -23,15 +30,20 @@ function HomeRoute() {
         </p>
 
         <div className="landing-actions" aria-label="Landing actions">
-          <button type="button" onClick={() => navigate('/plan')}>
-            Plan
-          </button>
-          <button type="button" onClick={() => navigate('/login')}>
-            Login
-          </button>
-          <button type="button" onClick={() => navigate('/register')}>
-            Register
-          </button>
+          {loggedIn ? (
+            <button type="button" onClick={() => navigate('/plan')}>
+              Plan
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={() => navigate('/login')}>
+                Login
+              </button>
+              <button type="button" onClick={() => navigate('/register')}>
+                Register
+              </button>
+            </>
+          )}
         </div>
       </main>
     </section>

@@ -4,7 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { registerUser } from '../util/registerApi.ts'
 import './Register.css'
 
-function RegisterRoute() {
+type RegisterRouteProps = {
+  onRegisterSuccess: (username: string) => void
+}
+
+function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -26,11 +30,7 @@ function RegisterRoute() {
     setIsError(!result.ok)
 
     if (result.ok) {
-      sessionStorage.setItem('nhcb-authenticated', 'true')
-      sessionStorage.setItem(
-        'nhcb-profile',
-        JSON.stringify({ username, role, department }),
-      )
+      onRegisterSuccess(username.trim())
 
       setTimeout(() => {
         navigate('/plan')
