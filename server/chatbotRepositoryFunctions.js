@@ -41,7 +41,14 @@ class chatbotRepositoryFunctions {
         if (!user) {
             return { "authenticated": false, "message": "Invalid username or password" };
         }
-        return { "authenticated": true, "message": "Successfully logged in", "id": user.id, "username": user.username };
+        return {
+            "authenticated": true,
+            "message": "Successfully logged in",
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "department": user.department
+        };
     }
 
     async addTask(userId, newTask) {
