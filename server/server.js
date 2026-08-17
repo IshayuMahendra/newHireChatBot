@@ -75,8 +75,12 @@ app.patch('/tasks/:id/complete', async (req, res) => {
     if (!Number.isInteger(taskId) || taskId < 1) {
         return res.status(400).json({ error: 'Invalid task ID' });
     }
+    const {completed} = req.body;
+    if (typeof completed !== 'boolean') {
+        return res.status(400).json({error:"body must contain boolean"})
+    };
     try {
-        const updatedTask = await chatbotRepositoryFunctions.markTaskCompleted(taskId);
+        const updatedTask = await chatbotRepositoryFunctions.updateTaskCompletion(taskId, completed);
         if (!updatedTask) {
             return res.status(404).json({ error: 'Task not found' });
         }
@@ -86,10 +90,6 @@ app.patch('/tasks/:id/complete', async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-//need to write PATCH /tasks/:id/complete
-
-
 
 app.listen(3001, () => {
     console.log("Server running on port 3001");

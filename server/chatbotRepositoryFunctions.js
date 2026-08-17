@@ -70,10 +70,10 @@ class chatbotRepositoryFunctions {
         return taskToInsert;
     }
 
-    async markTaskCompleted(taskId) {
-        const result = await taskCollection.updateOne(
+    async updateTaskCompletion(taskId, completed) {
+        await taskCollection.updateOne(
             { id: taskId },
-            { $set: { completed: true } }
+            { $set: { completed } }
         );
         const updatedTask = await taskCollection.findOne({ id: taskId });
         return updatedTask;
