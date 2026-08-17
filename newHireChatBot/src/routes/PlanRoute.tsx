@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { askAssistant } from '../util/askApi.ts'
+import { generatePlan } from '../util/planApi'
 import './Plan.css'
 
 type PendingTask = {
   id: number
-  title: string
+  phase: string
   text: string
   due: string
 }
 
 type CompletedTask = {
   id: number
-  title: string
+  phase: string
   text: string
   due: string
   completedOn: string
@@ -33,6 +34,14 @@ type ApiTask = {
   createdAt?: string
 }
 
+const PHASE_ORDER: Record<string, number> = {
+  'Week 1': 1,
+  'Weeks 2-4': 2,
+  'Day 30': 3,
+  'Day 60': 4,
+  'Day 90': 5,
+}
+
 const API_BASE_URL = 'http://localhost:3001'
 
 function formatCompletedDate(timestamp?: string): string {
@@ -48,6 +57,28 @@ function formatCompletedDate(timestamp?: string): string {
   return parsed.toLocaleString()
 }
 
+function parseTaskText(rawText: string): { phase: string; text: string } {
+  const match = rawText.match(/^\[(.+?)\]\s*(.*)$/)
+  if (!match) {
+    return { phase: 'Task', text: rawText }
+  }
+
+  const [, phase, text] = match
+  return {
+    phase: phase.trim(),
+    text: text.trim() || rawText,
+  }
+}
+
+function compareTaskPhase(a: { phase: string; id: number }, b: { phase: string; id: number }) {
+  const phaseRankA = PHASE_ORDER[a.phase] ?? Number.MAX_SAFE_INTEGER
+  const phaseRankB = PHASE_ORDER[b.phase] ?? Number.MAX_SAFE_INTEGER
+  if (phaseRankA !== phaseRankB) {
+    return phaseRankA - phaseRankB
+  }
+  return a.id - b.id
+}
+
 function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
   const navigate = useNavigate()
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
@@ -60,6 +91,53 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
   )
   const [isAsking, setIsAsking] = useState(false)
   const [chatError, setChatError] = useState('')
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
+  const [planStatus, setPlanStatus] = useState('')
+
+  const loadTasks = useCallback(async (targetUserId: number) => {
+    setLoadingTasks(true)
+    setTaskError('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${targetUserId}/tasks`)
+      if (!response.ok) {
+        setPendingTasks([])
+        setCompletedTasks([])
+        setTaskError('Could not load tasks from the server.')
+        return
+      }
+
+      const tasks = (await response.json()) as ApiTask[]
+
+      const nextPending: PendingTask[] = tasks
+        .filter((task) => !task.completed)
+        .map((task) => ({
+          id: task.id,
+          ...parseTaskText(task.text),
+          due: 'Pending',
+        }))
+        .sort(compareTaskPhase)
+
+      const nextCompleted: CompletedTask[] = tasks
+        .filter((task) => Boolean(task.completed))
+        .map((task) => ({
+          id: task.id,
+          ...parseTaskText(task.text),
+          due: 'Completed',
+          completedOn: formatCompletedDate(task.createdAt),
+        }))
+        .sort(compareTaskPhase)
+
+      setPendingTasks(nextPending)
+      setCompletedTasks(nextCompleted)
+    } catch {
+      setPendingTasks([])
+      setCompletedTasks([])
+      setTaskError('Could not load tasks from the server.')
+    } finally {
+      setLoadingTasks(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!userId) {
@@ -70,69 +148,39 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
       return
     }
 
-    let isMounted = true
+    void loadTasks(userId)
+  }, [userId, loadTasks])
 
-    async function loadTasks() {
-      setLoadingTasks(true)
-      setTaskError('')
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/tasks`)
-        if (!response.ok) {
-          setPendingTasks([])
-          setCompletedTasks([])
-          setTaskError('Could not load tasks from the server.')
-          setLoadingTasks(false)
-          return
-        }
-
-        const tasks = (await response.json()) as ApiTask[]
-        if (!isMounted) {
-          return
-        }
-
-        const nextPending: PendingTask[] = tasks
-          .filter((task) => !task.completed)
-          .map((task) => ({
-            id: task.id,
-            title: `Task #${task.id}`,
-            text: task.text,
-            due: 'Pending',
-          }))
-
-        const nextCompleted: CompletedTask[] = tasks
-          .filter((task) => Boolean(task.completed))
-          .map((task) => ({
-            id: task.id,
-            title: `Task #${task.id}`,
-            text: task.text,
-            due: 'Completed',
-            completedOn: formatCompletedDate(task.createdAt),
-          }))
-
-        setPendingTasks(nextPending)
-        setCompletedTasks(nextCompleted)
-      } catch {
-        if (!isMounted) {
-          return
-        }
-
-        setPendingTasks([])
-        setCompletedTasks([])
-        setTaskError('Could not load tasks from the server.')
-      } finally {
-        if (isMounted) {
-          setLoadingTasks(false)
-        }
-      }
+  async function handleGeneratePlan() {
+    if (!userId) {
+      setTaskError('No user loaded. Please log in again.')
+      return
     }
 
-    loadTasks()
+    const trimmedRole = role.trim()
+    const trimmedDepartment = department.trim()
 
-    return () => {
-      isMounted = false
+    if (!trimmedRole || !trimmedDepartment) {
+      setTaskError('Missing role or department context. Please log in again.')
+      return
     }
-  }, [userId])
+
+    setPlanStatus('')
+    setTaskError('')
+    setIsGeneratingPlan(true)
+
+    const result = await generatePlan(userId, trimmedRole, trimmedDepartment)
+
+    if (!result.ok) {
+      setTaskError(result.message)
+      setIsGeneratingPlan(false)
+      return
+    }
+
+    await loadTasks(userId)
+    setPlanStatus(result.message)
+    setIsGeneratingPlan(false)
+  }
 
   async function completeTask(taskId: number) {
     try {
@@ -181,12 +229,12 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
       setPendingTasks((currentPending) => [
         {
           id: taskToMove.id,
-          title: taskToMove.title,
+          phase: taskToMove.phase,
           text: taskToMove.text,
           due: taskToMove.due,
         },
         ...currentPending,
-      ])
+      ].sort(compareTaskPhase))
 
       return currentCompleted.filter((task) => task.id !== taskId)
     })
@@ -238,6 +286,7 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
         <section className="plan-tasks" aria-label="Onboarding tasks">
           <h2>Task List</h2>
           <p className="plan-subtext">Loaded from your saved task list.</p>
+          {planStatus ? <p className="plan-subtext">{planStatus}</p> : null}
           {taskError ? <p className="plan-subtext">{taskError}</p> : null}
           {loadingTasks ? <p className="plan-subtext">Loading tasks...</p> : null}
 
@@ -252,9 +301,9 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
                         type="checkbox"
                         checked={false}
                         onChange={() => void completeTask(task.id)}
-                        aria-label={`Mark ${task.title} complete`}
+                        aria-label={`Mark ${task.text} complete`}
                       />
-                      <span>{task.title}</span>
+                      <span><strong>{task.phase}</strong></span>
                     </label>
                     <p>{task.text}</p>
                     <span className="task-due">Due: {task.due}</span>
@@ -275,7 +324,7 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
                       <span className="completed-check" aria-hidden="true">
                         ✓
                       </span>
-                      <span>{task.title}</span>
+                      <span><strong>{task.phase}</strong></span>
                     </div>
                     <p>{task.text}</p>
                     <span className="task-due">Completed: {task.completedOn}</span>
@@ -322,8 +371,8 @@ function PlanRoute({ username, userId, role, department }: PlanRouteProps) {
               disabled={isAsking}
             />
             <div className="chat-button-row">
-              <button type="button" disabled={isAsking}>
-                Plan
+              <button type="button" disabled={isGeneratingPlan || isAsking} onClick={() => void handleGeneratePlan()}>
+                {isGeneratingPlan ? 'Planning...' : 'Plan'}
               </button>
               <button type="submit" disabled={isAsking}>
                 {isAsking ? 'Asking...' : 'Ask'}
