@@ -2,6 +2,7 @@ export type PlanResult = {
   ok: boolean
   message: string
   taskCount?: number
+  response?: string
 }
 
 type PlanPayload = {
@@ -46,6 +47,7 @@ export async function generatePlan(
     const body = (await response.json()) as {
       detail?: string
       task_count?: number
+      response?: string
     }
 
     if (!response.ok) {
@@ -59,6 +61,7 @@ export async function generatePlan(
       ok: true,
       message: 'Plan generated and tasks saved.',
       taskCount: body.task_count,
+      response: body.response,
     }
   } catch {
     return {

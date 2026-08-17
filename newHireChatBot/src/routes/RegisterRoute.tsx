@@ -64,6 +64,7 @@ function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             placeholder="Choose a username"
+            autoComplete="new-username"
           />
 
           <label htmlFor="password">Password</label>
@@ -73,6 +74,7 @@ function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Create a password"
+            autoComplete="new-password"
           />
 
           <label htmlFor="role">Role</label>
@@ -82,6 +84,7 @@ function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
             value={role}
             onChange={(event) => setRole(event.target.value)}
             placeholder="Example: Software Engineer"
+            autoComplete="off"
           />
 
           <label htmlFor="department">Department</label>
@@ -91,6 +94,7 @@ function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
             value={department}
             onChange={(event) => setDepartment(event.target.value)}
             placeholder="Example: Engineering"
+            autoComplete="off"
           />
 
           <div className="register-actions">
