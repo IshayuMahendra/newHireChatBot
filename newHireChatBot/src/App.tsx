@@ -8,6 +8,7 @@ import PlanRoute from './routes/PlanRoute.tsx'
 function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
+  const [userId, setUserId] = useState<number | undefined>(undefined)
 
   return (
     <BrowserRouter>
@@ -20,6 +21,7 @@ function App() {
               onSignOut={() => {
                 setLoggedIn(false)
                 setUsername('')
+                setUserId(undefined)
               }}
             />
           }
@@ -31,9 +33,10 @@ function App() {
               <Navigate to="/plan" replace />
             ) : (
               <LoginRoute
-                onLoginSuccess={(nextUsername) => {
+                onLoginSuccess={(nextUsername, nextUserId) => {
                   setLoggedIn(true)
                   setUsername(nextUsername)
+                  setUserId(nextUserId)
                 }}
               />
             )
@@ -46,9 +49,10 @@ function App() {
               <Navigate to="/plan" replace />
             ) : (
               <RegisterRoute
-                onRegisterSuccess={(nextUsername) => {
+                onRegisterSuccess={(nextUsername, nextUserId) => {
                   setLoggedIn(true)
                   setUsername(nextUsername)
+                  setUserId(nextUserId)
                 }}
               />
             )
@@ -56,7 +60,13 @@ function App() {
         />
         <Route
           path="/plan"
-          element={loggedIn ? <PlanRoute username={username} /> : <Navigate to="/login" replace />}
+          element={
+            loggedIn ? (
+              <PlanRoute username={username} userId={userId} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

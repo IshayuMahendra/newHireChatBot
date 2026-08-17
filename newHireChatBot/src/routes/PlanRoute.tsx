@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Plan.css'
 
@@ -19,64 +19,130 @@ type CompletedTask = {
 
 type PlanRouteProps = {
   username: string
+  userId?: number
 }
 
-const initialPendingTasks: PendingTask[] = [
-  {
-    id: 1,
-    title: 'Meet Your Manager',
-    text: 'Set up a 30-minute introduction with your manager and discuss first-week priorities.',
-    due: 'Day 1',
-  },
-  {
-    id: 2,
-    title: 'Complete Payroll Setup',
-    text: 'Submit your direct deposit and tax forms through the onboarding portal.',
-    due: 'Day 2',
-  },
-  {
-    id: 3,
-    title: 'Environment Access',
-    text: 'Request all required tools, system access, and team communication channels.',
-    due: 'Day 3',
-  },
-  {
-    id: 4,
-    title: 'First Team Intro',
-    text: 'Attend your team standup and introduce your role, background, and onboarding goals.',
-    due: 'Week 1',
-  },
-  {
-    id: 5,
-    title: 'Team Lunch',
-    text: 'Join the team for a welcome lunch and informal introductions.',
-    due: 'Week 1',
-  },
-]
+type ApiTask = {
+  id: number
+  text: string
+  completed?: boolean
+  createdAt?: string
+}
 
-const initialCompletedTasks: CompletedTask[] = [
-  {
-    id: 101,
-    title: 'Company Handbook Review',
-    text: 'Read and acknowledge onboarding handbook and workplace policies.',
-    due: 'Day 1',
-    completedOn: 'Today',
-  },
-  {
-    id: 102,
-    title: 'Benefits Enrollment',
-    text: 'Finished health, dental, and vision enrollment setup.',
-    due: 'Day 2',
-    completedOn: 'Yesterday',
-  },
-]
+const API_BASE_URL = 'http://localhost:3001'
 
-function PlanRoute({ username }: PlanRouteProps) {
+function formatCompletedDate(timestamp?: string): string {
+  if (!timestamp) {
+    return new Date().toLocaleString()
+  }
+
+  const parsed = new Date(timestamp)
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date().toLocaleString()
+  }
+
+  return parsed.toLocaleString()
+}
+
+function PlanRoute({ username, userId }: PlanRouteProps) {
   const navigate = useNavigate()
-  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>(initialPendingTasks)
-  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>(initialCompletedTasks)
+  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([])
+  const [loadingTasks, setLoadingTasks] = useState(true)
+  const [taskError, setTaskError] = useState('')
 
-  function moveToCompleted(taskId: number) {
+  useEffect(() => {
+    if (!userId) {
+      setPendingTasks([])
+      setCompletedTasks([])
+      setLoadingTasks(false)
+      setTaskError('No user loaded. Please log in again.')
+      return
+    }
+
+    let isMounted = true
+
+    async function loadTasks() {
+      setLoadingTasks(true)
+      setTaskError('')
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/tasks`)
+        if (!response.ok) {
+          setPendingTasks([])
+          setCompletedTasks([])
+          setTaskError('Could not load tasks from the server.')
+          setLoadingTasks(false)
+          return
+        }
+
+        const tasks = (await response.json()) as ApiTask[]
+        if (!isMounted) {
+          return
+        }
+
+        const nextPending: PendingTask[] = tasks
+          .filter((task) => !task.completed)
+          .map((task) => ({
+            id: task.id,
+            title: `Task #${task.id}`,
+            text: task.text,
+            due: 'Pending',
+          }))
+
+        const nextCompleted: CompletedTask[] = tasks
+          .filter((task) => Boolean(task.completed))
+          .map((task) => ({
+            id: task.id,
+            title: `Task #${task.id}`,
+            text: task.text,
+            due: 'Completed',
+            completedOn: formatCompletedDate(task.createdAt),
+          }))
+
+        setPendingTasks(nextPending)
+        setCompletedTasks(nextCompleted)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setPendingTasks([])
+        setCompletedTasks([])
+        setTaskError('Could not load tasks from the server.')
+      } finally {
+        if (isMounted) {
+          setLoadingTasks(false)
+        }
+      }
+    }
+
+    loadTasks()
+
+    return () => {
+      isMounted = false
+    }
+  }, [userId])
+
+  async function completeTask(taskId: number) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/complete`, {
+        method: 'PATCH',
+      })
+
+      if (!response.ok) {
+        setTaskError('Could not update task status in the server.')
+        return
+      }
+
+      setTaskError('')
+      moveToCompleted(taskId, new Date().toISOString())
+    } catch {
+      setTaskError('Could not update task status in the server.')
+    }
+  }
+
+  function moveToCompleted(taskId: number, completedAtIso: string) {
     setPendingTasks((currentPending) => {
       const taskToMove = currentPending.find((task) => task.id === taskId)
       if (!taskToMove) {
@@ -86,7 +152,7 @@ function PlanRoute({ username }: PlanRouteProps) {
       setCompletedTasks((currentCompleted) => [
         {
           ...taskToMove,
-          completedOn: 'Today',
+          completedOn: formatCompletedDate(completedAtIso),
         },
         ...currentCompleted,
       ])
@@ -128,7 +194,9 @@ function PlanRoute({ username }: PlanRouteProps) {
       <main className="plan-layout">
         <section className="plan-tasks" aria-label="Onboarding tasks">
           <h2>Task List</h2>
-          <p className="plan-subtext">Demo cards for layout only. Functionality comes next.</p>
+          <p className="plan-subtext">Loaded from your saved task list.</p>
+          {taskError ? <p className="plan-subtext">{taskError}</p> : null}
+          {loadingTasks ? <p className="plan-subtext">Loading tasks...</p> : null}
 
           <div className="task-columns">
             <section className="pending-section" aria-label="Pending tasks">
@@ -140,7 +208,7 @@ function PlanRoute({ username }: PlanRouteProps) {
                       <input
                         type="checkbox"
                         checked={false}
-                        onChange={() => moveToCompleted(task.id)}
+                        onChange={() => void completeTask(task.id)}
                         aria-label={`Mark ${task.title} complete`}
                       />
                       <span>{task.title}</span>
@@ -149,6 +217,9 @@ function PlanRoute({ username }: PlanRouteProps) {
                     <span className="task-due">Due: {task.due}</span>
                   </article>
                 ))}
+                {!loadingTasks && pendingTasks.length === 0 ? (
+                  <p className="plan-subtext">No pending tasks yet.</p>
+                ) : null}
               </div>
             </section>
 
@@ -174,6 +245,9 @@ function PlanRoute({ username }: PlanRouteProps) {
                     </button>
                   </article>
                 ))}
+                {!loadingTasks && completedTasks.length === 0 ? (
+                  <p className="plan-subtext">No completed tasks yet.</p>
+                ) : null}
               </div>
             </section>
           </div>

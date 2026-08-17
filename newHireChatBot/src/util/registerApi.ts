@@ -1,6 +1,7 @@
 export type RegisterResult = {
   ok: boolean
   message: string
+  userId?: number
 }
 
 type RegisterPayload = {
@@ -51,7 +52,13 @@ export async function registerUser(
       return { ok: false, message: serverMessage }
     }
 
-    return { ok: true, message: 'Registration successful. Redirecting to your plan...' }
+    const body = (await response.json()) as { id?: number }
+
+    return {
+      ok: true,
+      message: 'Registration successful. Redirecting to your plan...',
+      userId: body.id,
+    }
   } catch {
     return {
       ok: false,
