@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import httpx
 import os
 
@@ -8,7 +7,6 @@ from agent_service import invoke_AskModel, invoke_PlanModel, invoke_PlanModel_st
 from models import AskModel, PlanForUserModel, PlanModel
 from task_payloads import build_task_payloads
 
-# 1. Initialize the application
 app = FastAPI()
 TASKS_API_BASE_URL = os.getenv("TASKS_API_BASE_URL", "http://localhost:3001")
 
@@ -24,13 +22,9 @@ app.add_middleware(
 )
 
 
-class ChatRequest(BaseModel):
-    prompt: str
-
-# 2. Define a GET endpoint
 @app.get("/")
 async def read_root():
-    return {"message": "Hello, your FastAPI is successfully connected!"}
+    return {"message": "FastAPI inference server is running."}
 
 
 @app.post("/ask")
@@ -89,12 +83,3 @@ async def plan(request: PlanForUserModel):
         "tasks_created": created_tasks,
         "task_count": len(created_tasks),
     }
-
-
-@app.post("/plan-structured")
-async def plan_structured(request: PlanModel):
-    try:
-        result = invoke_PlanModel_structured(request)
-        return {"task_list": result.model_dump()}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Model invocation failed: {exc}")

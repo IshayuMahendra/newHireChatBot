@@ -3,23 +3,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from dotenv import load_dotenv
 from models import AskModel, PlanModel, PlanStructuredOutput
-# from langchain.agents import create_agent
 
 MODEL_NAME = "gpt-5.6-luna"
 
-# Load environment variables from .env file
 load_dotenv()
 
-
-# agent = create_agent(
-#     model = MODEL_NAME
-# )
-
-# Future feature 
-
-# Implement a narrative that will be sent to react
-
-# Implement these into Markdown
 ASK_PROMPT_TEMPLATE = PromptTemplate.from_template(
     """# New Hire Assistant
 
