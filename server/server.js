@@ -5,10 +5,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-app.get('/', (req, res) => {
-    res.send('Welcome to our app!')
-})
-
 app.post('/register', async (req, res) => {
     const newUser = req.body;
     const exists = await chatbotRepositoryFunctions.getUserByUsername(newUser.username);
@@ -29,7 +25,7 @@ app.post('/login', async (req, res) => {
         return res.status(401).json(authenticated);
     }
     return res.status(200).json(authenticated);
-});
+}); // change to return jwt
 
 app.get('/users/:id/tasks', async (req, res) => {
     const id = Number(req.params.id);
