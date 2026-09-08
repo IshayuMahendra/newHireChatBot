@@ -4,15 +4,18 @@ import { useNavigate } from 'react-router-dom'
 import { askAssistant } from '../util/askApi.ts'
 import { generatePlan } from '../util/planApi'
 import './Plan.css'
+import PlanOverview from './PlanOverview'
+import PlanTaskList from './PlanTaskList'
+import PlanChatPanel from './PlanChatPanel'
 
-type PendingTask = {
+export type PendingTask = {
   id: number
   phase: string
   text: string
   due: string
 }
 
-type CompletedTask = {
+export type CompletedTask = {
   id: number
   phase: string
   text: string
@@ -32,6 +35,11 @@ type ApiTask = {
   text: string
   completed?: boolean
   createdAt?: string
+}
+
+type ChatMessage = {
+  sender: 'user' | 'assistant'
+  text: string
 }
 
 const PHASE_ORDER: Record<string, number> = {
@@ -110,15 +118,7 @@ function PlanRoute({
   const [taskError, setTaskError] = useState('')
 
   const [chatInput, setChatInput] = useState('')
-  const [
-    chatMessages,
-    setChatMessages,
-  ] = useState<
-    Array<{
-      sender: 'user' | 'assistant'
-      text: string
-    }>
-  >([])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
 
   const [isAsking, setIsAsking] = useState(false)
   const [chatError, setChatError] = useState('')
@@ -140,9 +140,7 @@ function PlanRoute({
         if (!response.ok) {
           setPendingTasks([])
           setCompletedTasks([])
-          setTaskError(
-            'Could not load tasks from the server.',
-          )
+          setTaskError('Could not load tasks from the server.')
           return
         }
 
@@ -172,9 +170,7 @@ function PlanRoute({
       } catch {
         setPendingTasks([])
         setCompletedTasks([])
-        setTaskError(
-          'Could not load tasks from the server.',
-        )
+        setTaskError('Could not load tasks from the server.')
       } finally {
         setLoadingTasks(false)
       }
@@ -187,9 +183,7 @@ function PlanRoute({
       setPendingTasks([])
       setCompletedTasks([])
       setLoadingTasks(false)
-      setTaskError(
-        'No user loaded. Please log in again.',
-      )
+      setTaskError('No user loaded. Please log in again.')
       return
     }
 
@@ -198,9 +192,7 @@ function PlanRoute({
 
   async function handleGeneratePlan() {
     if (!userId) {
-      setTaskError(
-        'No user loaded. Please log in again.',
-      )
+      setTaskError('No user loaded. Please log in again.')
       return
     }
 
@@ -208,9 +200,7 @@ function PlanRoute({
     const trimmedDepartment = department.trim()
 
     if (!trimmedRole || !trimmedDepartment) {
-      setTaskError(
-        'Missing role or department context. Please log in again.',
-      )
+      setTaskError('Missing role or department context. Please log in again.')
       return
     }
 
@@ -239,104 +229,40 @@ function PlanRoute({
   }
 
   async function completeTask(
-  taskId: number,
-  completed: boolean,
-) {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/tasks/${taskId}/complete`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ completed }),
-      },
-    )
-
-    if (!response.ok) {
-      setTaskError(
-        'Could not update task status in the server.',
-      )
-      return
-    }
-
-    setTaskError('')
-    await loadTasks(userId!)
-  } catch {
-    setTaskError(
-      'Could not update task status in the server.',
-    )
-  }
-}
-
-  function moveToCompleted(
     taskId: number,
-    completedAtIso: string,
+    completed: boolean,
   ) {
-    setPendingTasks((currentPending) => {
-      const taskToMove = currentPending.find(
-        (task) => task.id === taskId,
-      )
-
-      if (!taskToMove) {
-        return currentPending
-      }
-
-      setCompletedTasks((currentCompleted) => [
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/tasks/${taskId}/complete`,
         {
-          ...taskToMove,
-          completedOn:
-            formatCompletedDate(completedAtIso),
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ completed }),
         },
-        ...currentCompleted,
-      ])
-
-      return currentPending.filter(
-        (task) => task.id !== taskId,
-      )
-    })
-  }
-
-  function moveToPending(taskId: number) {
-    setCompletedTasks((currentCompleted) => {
-      const taskToMove = currentCompleted.find(
-        (task) => task.id === taskId,
       )
 
-      if (!taskToMove) {
-        return currentCompleted
+      if (!response.ok) {
+        setTaskError('Could not update task status in the server.')
+        return
       }
 
-      setPendingTasks((currentPending) =>
-        [
-          {
-            id: taskToMove.id,
-            phase: taskToMove.phase,
-            text: taskToMove.text,
-            due: taskToMove.due,
-          },
-          ...currentPending,
-        ].sort(compareTaskPhase),
-      )
-
-      return currentCompleted.filter(
-        (task) => task.id !== taskId,
-      )
-    })
+      setTaskError('')
+      await loadTasks(userId!)
+    } catch {
+      setTaskError('Could not update task status in the server.')
+    }
   }
 
-  async function handleAsk(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const trimmedPrompt = chatInput.trim()
 
     if (!trimmedPrompt) {
-      setChatError(
-        'Please enter a question before asking.',
-      )
+      setChatError('Please enter a question before asking.')
       return
     }
 
@@ -391,247 +317,27 @@ function PlanRoute({
       </header>
 
       <main className="plan-layout">
+        <PlanOverview planResponse={planResponse} />
 
-        {/* ================================
-            ONBOARDING PLAN
-            ================================ */}
-        <section
-          className="plan-overview"
-          aria-label="Onboarding plan"
-        >
-          <h2>Onboarding Plan</h2>
+        <PlanTaskList
+          pendingTasks={pendingTasks}
+          completedTasks={completedTasks}
+          loadingTasks={loadingTasks}
+          taskError={taskError}
+          planStatus={planStatus}
+          onToggleTask={completeTask}
+        />
 
-          <div className="plan-overview-scroll">
-            {planResponse ? (
-              <p className="plan-response">
-                {planResponse}
-              </p>
-            ) : (
-              <p className="plan-subtext">
-                Generate a plan to see your
-                onboarding roadmap.
-              </p>
-            )}
-          </div>
-        </section>
-
-
-        {/* ================================
-            TASK LIST
-            ================================ */}
-        <section
-          className="plan-tasks"
-          aria-label="Onboarding tasks"
-        >
-          <h2>Task List</h2>
-
-          <p className="plan-subtext">
-            Loaded from your saved task list.
-          </p>
-
-          {planStatus ? (
-            <p className="plan-subtext">
-              {planStatus}
-            </p>
-          ) : null}
-
-          {taskError ? (
-            <p className="plan-subtext">
-              {taskError}
-            </p>
-          ) : null}
-
-          {loadingTasks ? (
-            <p className="plan-subtext">
-              Loading tasks...
-            </p>
-          ) : null}
-
-          <div className="task-columns">
-
-            {/* Pending Tasks */}
-            <section
-              className="pending-section"
-              aria-label="Pending tasks"
-            >
-              <h3>Pending Tasks</h3>
-
-              <div className="task-scroll-list">
-                {pendingTasks.map((task) => (
-                  <article
-                    key={task.id}
-                    className="task-card"
-                  >
-                   <label className="task-check-row">
-                     <input
-                        type="checkbox"
-                         checked={false}
-                         onChange={(event) =>
-                          void completeTask(
-                            task.id,
-                            event.target.checked,
-                          )
-                          }
-                          aria-label={`Mark ${task.text} complete`}
-                        />
-
-                      <span>
-                        <strong>{task.phase}</strong>
-                      </span>
-                    </label>
-
-                    <p>{task.text}</p>
-
-                    <span className="task-due">
-                      Due: {task.due}
-                    </span>
-                  </article>
-                ))}
-
-                {!loadingTasks &&
-                pendingTasks.length === 0 ? (
-                  <p className="plan-subtext">
-                    No pending tasks yet.
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-
-            {/* Completed Tasks */}
-            <section
-              className="completed-section"
-              aria-label="Completed tasks"
-            >
-              <h3>Completed Tasks</h3>
-
-              <div className="completed-list">
-                {completedTasks.map((task) => (
-                  <article
-                    key={task.id}
-                    className="task-card completed-card"
-                  >
-                    <div className="completed-title-row">
-                      <span
-                        className="completed-check"
-                        aria-hidden="true"
-                      >
-                        ✓
-                      </span>
-
-                      <span>
-                        <strong>{task.phase}</strong>
-                      </span>
-                    </div>
-
-                    <p>{task.text}</p>
-
-                    <span className="task-due">
-                      Completed:{' '}
-                      {task.completedOn}
-                    </span>
-
-                    <button
-                      type="button"
-                      className="completed-action-button"
-                      onClick={() =>
-                        void completeTask(task.id, false)
-                      }
-                    >
-                      Mark as Pending
-                    </button>
-                  </article>
-                ))}
-
-                {!loadingTasks &&
-                completedTasks.length === 0 ? (
-                  <p className="plan-subtext">
-                    No completed tasks yet.
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-          </div>
-        </section>
-
-
-        {/* ================================
-            ASSISTANT CHAT
-            ================================ */}
-        <section
-          className="plan-chat"
-          aria-label="AI chat panel"
-        >
-          <h2>Assistant Chat</h2>
-
-          <div
-            className="chat-window"
-            role="log"
-            aria-live="polite"
-          >
-            {chatMessages.length === 0 ? (
-              <p className="chat-empty-state">
-                Chat messages will appear here.
-              </p>
-            ) : (
-              chatMessages.map((message, index) => (
-                <div
-                  key={`${message.sender}-${index}`}
-                  className={`chat-message ${message.sender}`}
-                >
-                  {message.text}
-                </div>
-              ))
-            )}
-          </div>
-
-          {chatError ? (
-            <p className="plan-subtext chat-error">
-              {chatError}
-            </p>
-          ) : null}
-
-          <form
-            className="chat-input-row"
-            onSubmit={handleAsk}
-          >
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(event) =>
-                setChatInput(event.target.value)
-              }
-              placeholder="Ask a question..."
-              aria-label="Ask the assistant"
-              disabled={isAsking}
-            />
-
-            <div className="chat-button-row">
-              <button
-                type="button"
-                disabled={
-                  isGeneratingPlan || isAsking
-                }
-                onClick={() =>
-                  void handleGeneratePlan()
-                }
-              >
-                {isGeneratingPlan
-                  ? 'Planning...'
-                  : 'Plan'}
-              </button>
-
-              <button
-                type="submit"
-                disabled={isAsking}
-              >
-                {isAsking ? 'Asking...' : 'Ask'}
-              </button>
-            </div>
-          </form>
-        </section>
-
+        <PlanChatPanel
+          chatMessages={chatMessages}
+          chatError={chatError}
+          chatInput={chatInput}
+          isAsking={isAsking}
+          isGeneratingPlan={isGeneratingPlan}
+          onChatInputChange={setChatInput}
+          onAsk={handleAsk}
+          onGeneratePlan={handleGeneratePlan}
+        />
       </main>
     </section>
   )
