@@ -106,6 +106,43 @@
   font-size: 0.94rem;
 }
 
+.task-manager-tools {
+  margin-bottom: 12px;
+}
+
+.task-manager-button,
+.task-manager-actions button,
+.task-editor button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 700;
+  color: #ffffff;
+  background: #121c4e;
+  cursor: pointer;
+}
+
+.task-editor,
+.task-manager-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.task-editor input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(18, 28, 78, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.task-manager-actions button:last-child {
+  background: #a31c15;
+}
+
 /* =========================================
    ONBOARDING PLAN
    ========================================= */
@@ -127,6 +164,67 @@
   white-space: pre-line;
   line-height: 1.5;
   font-size: 0.94rem;
+}
+
+.plan-window {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(18, 28, 78, 0.14);
+}
+
+.plan-window:first-child {
+  padding-top: 0;
+}
+
+.plan-window-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.plan-window h3 {
+  margin: 0;
+  color: #121c4e;
+  font-size: 1rem;
+}
+
+.plan-window-empty {
+  margin: 8px 0 0;
+  color: #5b648c;
+  font-size: 0.9rem;
+}
+
+.plan-edit-button,
+.plan-window-editor button {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  font-weight: 700;
+  background: #121c4e;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.plan-window-editor {
+  margin-top: 10px;
+}
+
+.plan-window-editor textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid rgba(18, 28, 78, 0.25);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+}
+
+.plan-window-editor div {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 /* =========================================

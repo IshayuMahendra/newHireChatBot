@@ -3,11 +3,15 @@ import './Home.css'
 
 type HomeRouteProps = {
   loggedIn: boolean
-  userRole?: string
+  isManager: boolean
   onSignOut: () => void
 }
 
-function HomeRoute({ loggedIn, userRole, onSignOut }: HomeRouteProps) {
+function HomeRoute({
+  loggedIn,
+  isManager,
+  onSignOut,
+}: HomeRouteProps) {
   const navigate = useNavigate()
 
   function handleSignOut() {
@@ -33,14 +37,20 @@ function HomeRoute({ loggedIn, userRole, onSignOut }: HomeRouteProps) {
         <div className="landing-actions" aria-label="Landing actions">
           {loggedIn ? (
             <>
-              <button type="button" onClick={() => navigate('/plan')}>
-                Plan
-              </button>
-              {userRole?.toLowerCase() === 'manager' ? (
+              {isManager ? (
                 <button type="button" onClick={() => navigate('/team')}>
                   Team
                 </button>
-              ) : null}
+              ) : (
+                <>
+                  <button type="button" onClick={() => navigate('/plan')}>
+                    Plan
+                  </button>
+                  <button type="button" onClick={() => navigate('/dashboard')}>
+                    Dashboard
+                  </button>
+                </>
+              )}
             </>
           ) : (
             <>

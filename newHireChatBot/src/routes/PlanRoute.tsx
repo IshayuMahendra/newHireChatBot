@@ -23,11 +23,18 @@ export type CompletedTask = {
   completedOn: string
 }
 
+export type OnboardingPlan = {
+  plan30Day: string
+  plan60Day: string
+  plan90Day: string
+}
+
 type PlanRouteProps = {
   username: string
   userId?: number
   role: string
   department: string
+  canManageTasks: boolean
 }
 
 type ApiTask = {
@@ -109,6 +116,7 @@ function PlanRoute({
   userId,
   role,
   department,
+  canManageTasks,
 }: PlanRouteProps) {
   const navigate = useNavigate()
 
@@ -126,6 +134,11 @@ function PlanRoute({
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
   const [planStatus, setPlanStatus] = useState('')
   const [planResponse, setPlanResponse] = useState('')
+  const [onboardingPlan, setOnboardingPlan] = useState<OnboardingPlan>({
+    plan30Day: '',
+    plan60Day: '',
+    plan90Day: '',
+  })
 
   const loadTasks = useCallback(
     async (targetUserId: number) => {
@@ -256,6 +269,50 @@ function PlanRoute({
     }
   }
 
+  function addTask(text: string) {
+    setPendingTasks((currentTasks) => [
+      ...currentTasks,
+      {
+        id: -Date.now(),
+        phase: 'Task',
+        text,
+        due: 'Pending',
+      },
+    ])
+  }
+
+  function editTask(taskId: number, text: string) {
+    setPendingTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId ? { ...task, text } : task,
+      ),
+    )
+    setCompletedTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId ? { ...task, text } : task,
+      ),
+    )
+  }
+
+  function deleteTask(taskId: number) {
+    setPendingTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== taskId),
+    )
+    setCompletedTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== taskId),
+    )
+  }
+
+  function updatePlanWindow(
+    window: keyof OnboardingPlan,
+    text: string,
+  ) {
+    setOnboardingPlan((currentPlan) => ({
+      ...currentPlan,
+      [window]: text,
+    }))
+  }
+
   async function handleAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -317,7 +374,12 @@ function PlanRoute({
       </header>
 
       <main className="plan-layout">
-        <PlanOverview planResponse={planResponse} />
+        <PlanOverview
+          planResponse={planResponse}
+          onboardingPlan={onboardingPlan}
+          canManagePlans={canManageTasks}
+          onUpdatePlanWindow={updatePlanWindow}
+        />
 
         <PlanTaskList
           pendingTasks={pendingTasks}
@@ -326,6 +388,10 @@ function PlanRoute({
           taskError={taskError}
           planStatus={planStatus}
           onToggleTask={completeTask}
+          canManageTasks={canManageTasks}
+          onAddTask={addTask}
+          onEditTask={editTask}
+          onDeleteTask={deleteTask}
         />
 
         <PlanChatPanel

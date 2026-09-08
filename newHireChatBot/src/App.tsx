@@ -5,6 +5,7 @@ import LoginRoute from './routes/LoginRoute.tsx'
 import RegisterRoute from './routes/RegisterRoute.tsx'
 import PlanRoute from './routes/PlanRoute.tsx'
 import TeamRoute from './routes/TeamRoute.tsx'
+import DashboardRoute from './routes/DashboardRoute.tsx'
 
 type AuthSession = {
   username: string
@@ -75,7 +76,7 @@ function App() {
           element={
             <HomeRoute
               loggedIn={isAuthenticated}
-              userRole={session.role}
+              isManager={isManager}
               onSignOut={() => {
                 clearSession()
               }}
@@ -154,6 +155,22 @@ function App() {
           }
         />
         <Route
+          path="/dashboard"
+          element={
+            isAuthenticated && !isManager ? (
+              <DashboardRoute
+                username={session.username}
+                role={session.role}
+                department={session.department}
+              />
+            ) : isAuthenticated ? (
+              <Navigate to="/team" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
           path="/plan"
           element={
             isAuthenticated ? (
@@ -162,6 +179,7 @@ function App() {
                 userId={session.userId}
                 role={session.role}
                 department={session.department}
+                canManageTasks={isManager}
               />
             ) : (
               <Navigate to="/login" replace />

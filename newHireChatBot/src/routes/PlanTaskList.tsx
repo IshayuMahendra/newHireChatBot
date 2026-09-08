@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import './Plan.css'
 import type { CompletedTask, PendingTask } from './PlanRoute'
 
@@ -8,6 +10,10 @@ type PlanTaskListProps = {
   taskError: string
   planStatus: string
   onToggleTask: (taskId: number, completed: boolean) => Promise<void> | void
+  canManageTasks: boolean
+  onAddTask: (text: string) => void
+  onEditTask: (taskId: number, text: string) => void
+  onDeleteTask: (taskId: number) => void
 }
 
 function PlanTaskList({
@@ -17,7 +23,47 @@ function PlanTaskList({
   taskError,
   planStatus,
   onToggleTask,
+  canManageTasks,
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
 }: PlanTaskListProps) {
+  const [isAddingTask, setIsAddingTask] = useState(false)
+  const [draftTaskText, setDraftTaskText] = useState('')
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+  const [editingTaskText, setEditingTaskText] = useState('')
+
+  function submitNewTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const text = draftTaskText.trim()
+
+    if (!text) {
+      return
+    }
+
+    onAddTask(text)
+    setDraftTaskText('')
+    setIsAddingTask(false)
+  }
+
+  function submitTaskEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const text = editingTaskText.trim()
+
+    if (editingTaskId === null || !text) {
+      return
+    }
+
+    onEditTask(editingTaskId, text)
+    setEditingTaskId(null)
+    setEditingTaskText('')
+  }
+
+  function beginTaskEdit(taskId: number, text: string) {
+    setEditingTaskId(taskId)
+    setEditingTaskText(text)
+  }
+
   return (
     <section
       className="plan-tasks"
@@ -28,6 +74,34 @@ function PlanTaskList({
       <p className="plan-subtext">
         Loaded from your saved task list.
       </p>
+
+      {canManageTasks ? (
+        <div className="task-manager-tools">
+          <button
+            type="button"
+            className="task-manager-button"
+            onClick={() => setIsAddingTask(true)}
+          >
+            Add Task
+          </button>
+
+          {isAddingTask ? (
+            <form className="task-editor" onSubmit={submitNewTask}>
+              <input
+                value={draftTaskText}
+                onChange={(event) => setDraftTaskText(event.target.value)}
+                placeholder="Describe the task"
+                aria-label="New task description"
+                autoFocus
+              />
+              <button type="submit">Save</button>
+              <button type="button" onClick={() => setIsAddingTask(false)}>
+                Cancel
+              </button>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
 
       {planStatus ? (
         <p className="plan-subtext">{planStatus}</p>
@@ -74,6 +148,19 @@ function PlanTaskList({
 
                 <p>{task.text}</p>
 
+                {canManageTasks ? (
+                  <TaskManagerActions
+                    task={task}
+                    editingTaskId={editingTaskId}
+                    editingTaskText={editingTaskText}
+                    onEditingTaskTextChange={setEditingTaskText}
+                    onStartEdit={beginTaskEdit}
+                    onSaveEdit={submitTaskEdit}
+                    onCancelEdit={() => setEditingTaskId(null)}
+                    onDelete={onDeleteTask}
+                  />
+                ) : null}
+
                 <span className="task-due">
                   Due: {task.due}
                 </span>
@@ -115,6 +202,19 @@ function PlanTaskList({
 
                 <p>{task.text}</p>
 
+                {canManageTasks ? (
+                  <TaskManagerActions
+                    task={task}
+                    editingTaskId={editingTaskId}
+                    editingTaskText={editingTaskText}
+                    onEditingTaskTextChange={setEditingTaskText}
+                    onStartEdit={beginTaskEdit}
+                    onSaveEdit={submitTaskEdit}
+                    onCancelEdit={() => setEditingTaskId(null)}
+                    onDelete={onDeleteTask}
+                  />
+                ) : null}
+
                 <span className="task-due">
                   Completed: {task.completedOn}
                 </span>
@@ -138,6 +238,58 @@ function PlanTaskList({
         </section>
       </div>
     </section>
+  )
+}
+
+type EditableTask = PendingTask | CompletedTask
+
+type TaskManagerActionsProps = {
+  task: EditableTask
+  editingTaskId: number | null
+  editingTaskText: string
+  onEditingTaskTextChange: (text: string) => void
+  onStartEdit: (taskId: number, text: string) => void
+  onSaveEdit: (event: FormEvent<HTMLFormElement>) => void
+  onCancelEdit: () => void
+  onDelete: (taskId: number) => void
+}
+
+function TaskManagerActions({
+  task,
+  editingTaskId,
+  editingTaskText,
+  onEditingTaskTextChange,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+}: TaskManagerActionsProps) {
+  if (editingTaskId === task.id) {
+    return (
+      <form className="task-editor" onSubmit={onSaveEdit}>
+        <input
+          value={editingTaskText}
+          onChange={(event) => onEditingTaskTextChange(event.target.value)}
+          aria-label={`Edit ${task.text}`}
+          autoFocus
+        />
+        <button type="submit">Save</button>
+        <button type="button" onClick={onCancelEdit}>
+          Cancel
+        </button>
+      </form>
+    )
+  }
+
+  return (
+    <div className="task-manager-actions">
+      <button type="button" onClick={() => onStartEdit(task.id, task.text)}>
+        Edit
+      </button>
+      <button type="button" onClick={() => onDelete(task.id)}>
+        Delete
+      </button>
+    </div>
   )
 }
 
