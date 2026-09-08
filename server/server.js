@@ -124,6 +124,20 @@ app.post('/flags', authenticateToken, async (req, res) => {
     }
 });
 
+app.get('/flags', authenticateToken, async (req, res) => {
+    if (req.user.userType !== 'manager') {
+        return res.status(403).json({ error: 'Only managers can access this resource' });
+    }
+    try {
+        const flags = await chatbotRepositoryFunctions.getAllFlags();
+        return res.status(200).json(flags);
+    } catch (error) {
+        console.error('GET /flags failed:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 app.listen(3001, () => {
     console.log("Server running on port 3001");
 })
