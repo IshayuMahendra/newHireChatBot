@@ -6,6 +6,7 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.5.0",
     "node": "^26.7.0"
   },
