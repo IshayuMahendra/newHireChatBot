@@ -137,6 +137,30 @@ app.get('/flags', authenticateToken, async (req, res) => {
     }
 });
 
+app.patch('/flags/:id', authenticateToken, async (req, res) => {
+    if (req.user.userType !== 'manager') {
+        return res.status(403).json({ error: 'Only managers can access this resource' });
+    }
+    const flagId = Number(req.params.id);
+    if (!Number.isInteger(flagId) || flagId < 1) {
+        return res.status(400).json({ error: 'Invalid flag ID' });
+    }
+    const { resolved } = req.body;
+    if (typeof resolved !== 'boolean') {
+        return res.status(400).json({ error: 'Body must contain boolean' });
+    }
+    try {
+        const flag = await chatbotRepositoryFunctions.getFlagById(flagId);
+        if (!flag) {
+            return res.status(404).json({ error: 'Flag not found' });
+        }
+        const updatedFlag = await chatbotRepositoryFunctions.updateFlagResolution(flagId, resolved);
+        return res.status(200).json(updatedFlag);
+    } catch (error) {
+        console.error('PATCH /flags/:id failed:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 app.listen(3001, () => {
     console.log("Server running on port 3001");

@@ -9,9 +9,9 @@ const SEED_USERS = [
 		_id: new ObjectId('6a7de7826893b4d54357d99a'),
 		id: 1,
 		username: 'csmiley',
-		password: 'A7m!x19',
+		password: 'abc123',
 		passwordHash: '$2b$10$K7dQfZ1aVxUuR3nLpS9oYeJ4mHtCwB6xNvA2rGkD8sTiQyE5uZbWm',
-		userType: 'new_hire',
+		userType: 'manager',
 		role: 'New Hire Engineer',
 		department: 'Global Product Technology',
 		plan30Day:
@@ -272,6 +272,7 @@ const SEED_TASKS = [
 
 const SEED_FLAGS = [
 	{
+		id: 1,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70001'),
 		userId: new ObjectId('6a7de7826893b4d54357d99a'),
 		reason: 'Confused about what RESTful APIs are',
@@ -279,6 +280,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T13:00:00.000Z'),
 	},
 	{
+		id: 2,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70002'),
 		userId: new ObjectId('6a7de7826893b4d54357d99b'),
 		reason: 'Asked the same benefits enrollment question three times',
@@ -286,6 +288,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T13:15:00.000Z'),
 	},
 	{
+		id: 3,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70003'),
 		userId: new ObjectId('6a7de7826893b4d54357d99c'),
 		reason: 'Stated they are stuck on setting up the reporting database access',
@@ -293,6 +296,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T13:30:00.000Z'),
 	},
 	{
+		id: 4,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70004'),
 		userId: new ObjectId('6a7de7826893b4d54357d99d'),
 		reason: 'No task completed in the last five days',
@@ -300,6 +304,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T13:45:00.000Z'),
 	},
 	{
+		id: 5,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70005'),
 		userId: new ObjectId('6a7de7826893b4d54357d99e'),
 		reason: 'Requested a 30-day plan change: design tooling access delayed',
@@ -307,6 +312,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T14:00:00.000Z'),
 	},
 	{
+		id: 6,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70006'),
 		userId: new ObjectId('6a7de7826893b4d54357d99f'),
 		reason: 'Unable to complete MFA setup, blocked on IT ticket',
@@ -314,6 +320,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T14:15:00.000Z'),
 	},
 	{
+		id: 7,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70007'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a0'),
 		reason: 'Asked assistant to remove required security training task',
@@ -321,6 +328,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T14:30:00.000Z'),
 	},
 	{
+		id: 8,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70008'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a1'),
 		reason: 'Repeated questions about document retention policy',
@@ -328,6 +336,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T14:45:00.000Z'),
 	},
 	{
+		id: 9,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b70009'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a2'),
 		reason: 'Negotiated 60-day plan to add CRM certification',
@@ -335,6 +344,7 @@ const SEED_FLAGS = [
 		createdAt: new Date('2026-09-04T15:00:00.000Z'),
 	},
 	{
+		id: 10,
 		_id: new ObjectId('6a7dfa11c2d3e4f5a6b7000a'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a3'),
 		reason: 'Explicitly said "I am stuck" on the onboarding checklist',
