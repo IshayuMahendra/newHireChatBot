@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import flagRepository from '../repositories/flagRepository.js';
+import eventRepository from '../repositories/eventRepository.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { requireManager } from '../middleware/requireManager.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -9,6 +10,11 @@ const router = Router();
 router.post('/flags', authenticateToken, asyncHandler('POST /flags', async (req, res) => {
     const newFlag = req.body;
     const flagAdded = await flagRepository.addFlag(newFlag);
+    await eventRepository.addEvent({
+        userId: newFlag.userId,
+        type: 'flag_raised',
+        detail: `Assistant flagged new hire: ${newFlag.reason}`,
+    });
     return res.status(201).json(flagAdded);
 }));
 
@@ -31,6 +37,13 @@ router.patch('/flags/:id', authenticateToken, requireManager, asyncHandler('PATC
         return res.status(404).json({ error: 'Flag not found' });
     }
     const updatedFlag = await flagRepository.updateFlagResolution(flagId, resolved);
+    if (resolved) {
+        await eventRepository.addEvent({
+            userId: flag.userId,
+            type: 'flag_resolved',
+            detail: `Manager marked flag "${flag.reason}" as resolved`,
+        });
+    }
     return res.status(200).json(updatedFlag);
 }));
 

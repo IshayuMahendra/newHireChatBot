@@ -355,6 +355,7 @@ const SEED_FLAGS = [
 
 const SEED_PROGRESS_EVENTS = [
 	{
+		id: 1,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80001'),
 		userId: new ObjectId('6a7de7826893b4d54357d99a'),
 		type: 'plan_created',
@@ -362,6 +363,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-08-13T15:55:43.000Z'),
 	},
 	{
+		id: 2,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80002'),
 		userId: new ObjectId('6a7de7826893b4d54357d99a'),
 		type: 'task_added',
@@ -369,6 +371,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-08-13T15:56:10.000Z'),
 	},
 	{
+		id: 3,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80003'),
 		userId: new ObjectId('6a7de7826893b4d54357d99a'),
 		type: 'task_completed',
@@ -376,6 +379,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-08-15T18:20:00.000Z'),
 	},
 	{
+		id: 4,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80004'),
 		userId: new ObjectId('6a7de7826893b4d54357d99a'),
 		type: 'flag_raised',
@@ -383,6 +387,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T13:00:00.000Z'),
 	},
 	{
+		id: 5,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80005'),
 		userId: new ObjectId('6a7de7826893b4d54357d99c'),
 		type: 'flag_raised',
@@ -390,6 +395,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T13:30:00.000Z'),
 	},
 	{
+		id: 6,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80006'),
 		userId: new ObjectId('6a7de7826893b4d54357d99d'),
 		type: 'flag_raised',
@@ -397,6 +403,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T13:45:00.000Z'),
 	},
 	{
+		id: 7,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80007'),
 		userId: new ObjectId('6a7de7826893b4d54357d99d'),
 		type: 'flag_resolved',
@@ -404,6 +411,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T16:10:00.000Z'),
 	},
 	{
+		id: 8,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80008'),
 		userId: new ObjectId('6a7de7826893b4d54357d99e'),
 		type: 'plan_updated',
@@ -411,6 +419,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T14:00:00.000Z'),
 	},
 	{
+		id: 9,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c80009'),
 		userId: new ObjectId('6a7de7826893b4d54357d99f'),
 		type: 'flag_resolved',
@@ -418,6 +427,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T16:25:00.000Z'),
 	},
 	{
+		id: 10,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c8000a'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a0'),
 		type: 'task_edited',
@@ -425,6 +435,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T14:35:00.000Z'),
 	},
 	{
+		id: 11,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c8000b'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a2'),
 		type: 'plan_updated',
@@ -432,6 +443,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T15:00:00.000Z'),
 	},
 	{
+		id: 12,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c8000c'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a2'),
 		type: 'flag_resolved',
@@ -439,6 +451,7 @@ const SEED_PROGRESS_EVENTS = [
 		timestamp: new Date('2026-09-04T16:40:00.000Z'),
 	},
 	{
+		id: 13,
 		_id: new ObjectId('6a7dfb22d3e4f5a6b7c8000d'),
 		userId: new ObjectId('6a7de7826893b4d54357d9a3'),
 		type: 'task_deleted',
