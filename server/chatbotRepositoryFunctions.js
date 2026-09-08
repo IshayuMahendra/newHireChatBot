@@ -13,11 +13,16 @@ class chatbotRepositoryFunctions {
         const id = await this.getNextUserId();
         newUser.id = id;
         await userCollection.insertOne(newUser);
-        return newUser;
+        const token = jwt.sign({id: newUser.id, username: newUser.username, userType: newUser.userType, department: newUser.department, role: newUser.role}, process.env.JWT_SECRET, { expiresIn: '1h' });
+        return { ...newUser, jwt: token };
     }
 
     async getUserByUsername(username) {
         return await userCollection.findOne({ username });
+    }
+
+    async getAllUsers() {
+        return await userCollection.find().toArray();
     }
 
     async getUserTasks(userId) {
@@ -44,7 +49,7 @@ class chatbotRepositoryFunctions {
         }
         return { authenticated: true, jwt: jwt.sign({id: user.id, username: user.username, userType: user.userType, department: user.department, role: user.role}, process.env.JWT_SECRET, { expiresIn: '1h' }) };
     }
-//need getAllUsers()
+
     async addTask(userId, newTask) {
         const user = await userCollection.findOne({ id: userId });
         if (!user) {

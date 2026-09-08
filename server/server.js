@@ -32,6 +32,11 @@ app.post('/login', async (req, res) => {
     return res.status(200).json(authenticated);
 });
 
+app.get('/users', authenticateToken, async (req, res) => {
+    const users = await chatbotRepositoryFunctions.getAllUsers();
+    return res.status(200).json(users);
+});
+
 app.get('/users/:id/tasks', authenticateToken, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) {
