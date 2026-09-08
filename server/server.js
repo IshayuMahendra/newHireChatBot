@@ -33,6 +33,9 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/users', authenticateToken, async (req, res) => {
+    if (req.user.userType !== 'manager') {
+        return res.status(403).json({ error: 'Only managers can access this resource' });
+    }
     const users = await chatbotRepositoryFunctions.getAllUsers();
     return res.status(200).json(users);
 });
@@ -106,6 +109,17 @@ app.patch('/tasks/:id/complete', authenticateToken, async (req, res) => {
         return res.status(200).json(updatedTask);
     } catch (error) {
         console.error('PATCH /tasks/:id/complete failed:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/flags', authenticateToken, async (req, res) => {
+    const newFlag = req.body;
+    try {
+        const flagAdded = await chatbotRepositoryFunctions.addFlag(newFlag);
+        return res.status(201).json(flagAdded);
+    } catch (error) {
+        console.error('POST /flags failed:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

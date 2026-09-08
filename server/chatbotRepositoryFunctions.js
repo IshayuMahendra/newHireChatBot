@@ -7,11 +7,13 @@ await client.connect();
 const db = client.db("chatbotdb");
 const userCollection = db.collection("users");
 const taskCollection = db.collection("tasks");
+const flagCollection = db.collection("flags");
 
 class chatbotRepositoryFunctions {
     async registerUser(newUser) {
-        const id = await this.getNextUserId();
+        const id = await this.getNextId(userCollection);
         newUser.id = id;
+        newUser.userType = 'new_hire';
         await userCollection.insertOne(newUser);
         const token = jwt.sign({id: newUser.id, username: newUser.username, userType: newUser.userType, department: newUser.department, role: newUser.role}, process.env.JWT_SECRET, { expiresIn: '1h' });
         return { ...newUser, jwt: token };
@@ -55,7 +57,7 @@ class chatbotRepositoryFunctions {
         if (!user) {
             return null;
         }
-        const taskId = await this.getNextTaskId();
+        const taskId = await this.getNextId(taskCollection);
         const completed = typeof newTask.completed === 'boolean' ? newTask.completed : false;
         const taskToInsert = {
             ...newTask,
@@ -78,6 +80,12 @@ class chatbotRepositoryFunctions {
         return updatedTask;
     }
 
+    async addFlag(newFlag) {
+        await flagCollection.insertOne(newFlag);
+        const token = jwt.sign({userId: newFlag.userId, id: newFlag._id, reason: newFlag.reason, resolved: newFlag.resolved, createdAt: newFlag.createdAt}, process.env.JWT_SECRET, { expiresIn: '1h' });
+        return { ...newFlag, jwt: token };
+    }
+
     async getTaskOwnerId(taskId) {
         const task = await taskCollection.findOne({ id: taskId });
         if (!task) {
@@ -87,19 +95,12 @@ class chatbotRepositoryFunctions {
         return owner ? owner.id : null;
     }
 
-    async getNextUserId() {
-        const topUser = await userCollection.find().sort({ id: -1 }).limit(1).toArray();
-        if (topUser.length === 0) {
+    async getNextId(collection) {
+        const topItem = await collection.find().sort({ id: -1 }).limit(1).toArray();
+        if (topItem.length === 0) {
             return 1;
         }
-        return topUser[0].id + 1;
-    }
-    async getNextTaskId() {
-        const topTask = await taskCollection.find().sort({ id: -1 }).limit(1).toArray();
-        if (topTask.length === 0) {
-            return 1;
-        }
-        return topTask[0].id + 1;
+        return topItem[0].id + 1;
     }
 }
 
