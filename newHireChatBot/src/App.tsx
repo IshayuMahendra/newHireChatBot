@@ -44,7 +44,7 @@ function App() {
         role: parsed.role ?? '',
         department: parsed.department ?? '',
         token: parsed.token ?? '',
-        userType: parsed.userType ?? parsed.role ?? '',
+        userType: parsed.userType ?? '',
       }
     } catch {
       return EMPTY_SESSION
@@ -55,9 +55,7 @@ function App() {
     session.token || session.userId || session.username,
   )
 
-  const isManager =
-    session.userType === 'manager' ||
-    session.role.toLowerCase() === 'manager'
+  const isManager = session.userType === 'manager'
 
   useEffect(() => {
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
@@ -146,6 +144,7 @@ function App() {
               <TeamRoute
                 currentUser={session.username || 'Manager'}
                 userRole={session.role}
+                token={session.token ?? ''}
               />
             ) : isAuthenticated ? (
               <Navigate to="/plan" replace />
@@ -179,6 +178,7 @@ function App() {
                 userId={session.userId}
                 role={session.role}
                 department={session.department}
+                token={session.token ?? ''}
                 canManageTasks={isManager}
               />
             ) : (

@@ -75,6 +75,10 @@
   height: 100%;
 }
 
+.plan-layout.manager-plan-layout {
+  grid-template-columns: 1fr 1.4fr;
+}
+
 /* =========================================
    MAIN CONTAINERS
    ========================================= */

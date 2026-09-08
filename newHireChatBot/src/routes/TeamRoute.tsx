@@ -1,34 +1,52 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getTeamUsers } from '../util/teamApi'
 import './Team.css'
 
 type TeamUser = {
+  _id: string
   id: number
-  name: string
+  username: string
   role: string
   department: string
+  userType: string
+  plan30Day?: string
+  plan60Day?: string
+  plan90Day?: string
   hasOpenFlag: boolean
 }
 
 type TeamRouteProps = {
   currentUser: string
   userRole: string
+  token: string
 }
 
-const mockUsers: TeamUser[] = [
-  { id: 101, name: 'Ava Patel', role: 'Software Engineer', department: 'Engineering', hasOpenFlag: true },
-  { id: 102, name: 'Marcus Lee', role: 'Payroll Specialist', department: 'Finance', hasOpenFlag: false },
-  { id: 103, name: 'Nina Gomez', role: 'HR Associate', department: 'People Ops', hasOpenFlag: true },
-  { id: 104, name: 'Daniel Brooks', role: 'Product Analyst', department: 'Product', hasOpenFlag: false },
-  { id: 105, name: 'Chloe Nguyen', role: 'Operations Coordinator', department: 'Operations', hasOpenFlag: false },
-  { id: 106, name: 'Ethan Wilson', role: 'Software Engineer', department: 'Engineering', hasOpenFlag: true },
-  { id: 107, name: 'Priya Singh', role: 'Data Analyst', department: 'Analytics', hasOpenFlag: false },
-  { id: 108, name: 'Omar Hassan', role: 'Customer Support Specialist', department: 'Support', hasOpenFlag: false },
-  { id: 109, name: 'Lena Morris', role: 'Business Analyst', department: 'Business Ops', hasOpenFlag: true },
-  { id: 110, name: 'Isaac Moore', role: 'QA Engineer', department: 'Engineering', hasOpenFlag: false },
-]
-
-function TeamRoute({ currentUser, userRole }: TeamRouteProps) {
+function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
   const navigate = useNavigate()
+  const [users, setUsers] = useState<TeamUser[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadUsers() {
+      setIsLoading(true)
+      setError('')
+
+      const result = await getTeamUsers(token)
+
+      if (!result.ok) {
+        setError(result.message)
+        setUsers([])
+      } else {
+        setUsers(result.users)
+      }
+
+      setIsLoading(false)
+    }
+
+    void loadUsers()
+  }, [token])
 
   return (
     <section className="team-shell">
@@ -55,15 +73,15 @@ function TeamRoute({ currentUser, userRole }: TeamRouteProps) {
         </div>
 
         <div className="team-grid" aria-label="New hire team list">
-          {mockUsers.map((user) => (
+          {users.map((user) => (
             <button
               key={user.id}
               type="button"
               className={`team-card ${user.hasOpenFlag ? 'flagged' : ''}`}
-              onClick={() => navigate('/plan')}
+              onClick={() => navigate('/plan', { state: { selectedUser: user } })}
             >
               <div className="team-card-top">
-                <span className="team-user-name">{user.name}</span>
+                <span className="team-user-name">{user.username}</span>
                 <span className={`team-flag ${user.hasOpenFlag ? 'open' : 'clear'}`}>
                   {user.hasOpenFlag ? 'Open flag' : 'No flag'}
                 </span>
@@ -85,6 +103,16 @@ function TeamRoute({ currentUser, userRole }: TeamRouteProps) {
               </dl>
             </button>
           ))}
+
+          {isLoading ? (
+            <p className="team-message">Loading new hires...</p>
+          ) : null}
+
+          {error ? <p className="team-message">{error}</p> : null}
+
+          {!isLoading && !error && users.length === 0 ? (
+            <p className="team-message">No new hires found.</p>
+          ) : null}
         </div>
       </main>
     </section>

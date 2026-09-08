@@ -1,3 +1,5 @@
+import { jwtDecode } from 'jwt-decode'
+
 export type RegisterResult = {
   ok: boolean
   message: string
@@ -13,6 +15,15 @@ type RegisterPayload = {
   password: string
   role: string
   department: string
+}
+
+type SessionClaims = {
+  id: number
+  username: string
+  userType?: string
+  role: string
+  department: string
+  exp?: number
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -57,20 +68,49 @@ export async function registerUser(
     }
 
     const body = (await response.json()) as {
-      id?: number
       token?: string
-      userType?: string
-      role?: string
+      jwt?: string
     }
 
-    return {
-      ok: true,
-      message: 'Registration successful. Redirecting to your plan...',
-      userId: body.id,
-      role: payload.role,
-      department: payload.department,
-      token: body.token,
-      userType: body.userType ?? body.role ?? payload.role,
+    const token = body.token ?? body.jwt
+
+    if (!token) {
+      return {
+        ok: false,
+        message: 'The server did not return an authentication token.',
+      }
+    }
+
+    try {
+      const claims = jwtDecode<SessionClaims>(token)
+
+      if (
+        !Number.isInteger(claims.id) ||
+        !claims.username ||
+        !claims.role ||
+        !claims.department ||
+        (claims.exp !== undefined && claims.exp * 1000 <= Date.now())
+      ) {
+        return {
+          ok: false,
+          message: 'The server returned an invalid or expired authentication token.',
+        }
+      }
+
+      return {
+        ok: true,
+        message: 'Registration successful. Redirecting to your plan...',
+        userId: claims.id,
+        role: claims.role,
+        department: claims.department,
+        token,
+        userType: claims.userType ?? 'new_hire',
+      }
+    } catch {
+      return {
+        ok: false,
+        message: 'The server returned an invalid authentication token.',
+      }
     }
   } catch {
     return {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { askAssistant } from '../util/askApi.ts'
 import { generatePlan } from '../util/planApi'
 import './Plan.css'
@@ -34,7 +34,18 @@ type PlanRouteProps = {
   userId?: number
   role: string
   department: string
+  token: string
   canManageTasks: boolean
+}
+
+type SelectedUser = {
+  id: number
+  username: string
+  role: string
+  department: string
+  plan30Day?: string
+  plan60Day?: string
+  plan90Day?: string
 }
 
 type ApiTask = {
@@ -116,9 +127,19 @@ function PlanRoute({
   userId,
   role,
   department,
+  token,
   canManageTasks,
 }: PlanRouteProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const selectedUser = (location.state as { selectedUser?: SelectedUser } | null)
+    ?.selectedUser
+  const targetUser = selectedUser ?? {
+    id: userId,
+    username,
+    role,
+    department,
+  }
 
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
   const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([])
@@ -148,6 +169,11 @@ function PlanRoute({
       try {
         const response = await fetch(
           `${API_BASE_URL}/users/${targetUserId}/tasks`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
         )
 
         if (!response.ok) {
@@ -188,11 +214,11 @@ function PlanRoute({
         setLoadingTasks(false)
       }
     },
-    [],
+    [token],
   )
 
   useEffect(() => {
-    if (!userId) {
+    if (!targetUser.id) {
       setPendingTasks([])
       setCompletedTasks([])
       setLoadingTasks(false)
@@ -200,8 +226,16 @@ function PlanRoute({
       return
     }
 
-    void loadTasks(userId)
-  }, [userId, loadTasks])
+    void loadTasks(targetUser.id)
+  }, [targetUser.id, loadTasks])
+
+  useEffect(() => {
+    setOnboardingPlan({
+      plan30Day: selectedUser?.plan30Day ?? '',
+      plan60Day: selectedUser?.plan60Day ?? '',
+      plan90Day: selectedUser?.plan90Day ?? '',
+    })
+  }, [selectedUser])
 
   async function handleGeneratePlan() {
     if (!userId) {
@@ -252,6 +286,7 @@ function PlanRoute({
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ completed }),
         },
@@ -263,7 +298,7 @@ function PlanRoute({
       }
 
       setTaskError('')
-      await loadTasks(userId!)
+      await loadTasks(targetUser.id!)
     } catch {
       setTaskError('Could not update task status in the server.')
     }
@@ -362,6 +397,7 @@ function PlanRoute({
       <header className="plan-header">
         <h1>
           {`${username || 'New Hire'} Onboarding Plan`}
+          {selectedUser ? `: ${targetUser.username}` : ''}
         </h1>
 
         <button
@@ -373,7 +409,7 @@ function PlanRoute({
         </button>
       </header>
 
-      <main className="plan-layout">
+      <main className={`plan-layout ${canManageTasks ? 'manager-plan-layout' : ''}`}>
         <PlanOverview
           planResponse={planResponse}
           onboardingPlan={onboardingPlan}
@@ -394,16 +430,18 @@ function PlanRoute({
           onDeleteTask={deleteTask}
         />
 
-        <PlanChatPanel
-          chatMessages={chatMessages}
-          chatError={chatError}
-          chatInput={chatInput}
-          isAsking={isAsking}
-          isGeneratingPlan={isGeneratingPlan}
-          onChatInputChange={setChatInput}
-          onAsk={handleAsk}
-          onGeneratePlan={handleGeneratePlan}
-        />
+        {!canManageTasks ? (
+          <PlanChatPanel
+            chatMessages={chatMessages}
+            chatError={chatError}
+            chatInput={chatInput}
+            isAsking={isAsking}
+            isGeneratingPlan={isGeneratingPlan}
+            onChatInputChange={setChatInput}
+            onAsk={handleAsk}
+            onGeneratePlan={handleGeneratePlan}
+          />
+        ) : null}
       </main>
     </section>
   )
