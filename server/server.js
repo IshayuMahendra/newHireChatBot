@@ -1,6 +1,8 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import chatbotRepositoryFunctions from './chatbotRepositoryFunctions.js';
+import { authenticateToken } from './middleware/auth.js';
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -10,6 +12,9 @@ app.post('/register', async (req, res) => {
     const exists = await chatbotRepositoryFunctions.getUserByUsername(newUser.username);
     if (exists) {
         return res.status(400).json({ error: 'Username already exists' });
+    }
+    if (newUser.userType === 'manager') {
+        return res.status(400).json({ error: 'Cannot register as manager' });
     }
     const userAdded = await chatbotRepositoryFunctions.registerUser(newUser);
     res.status(201).json(userAdded);
@@ -25,12 +30,15 @@ app.post('/login', async (req, res) => {
         return res.status(401).json(authenticated);
     }
     return res.status(200).json(authenticated);
-}); // change to return jwt
+});
 
-app.get('/users/:id/tasks', async (req, res) => {
+app.get('/users/:id/tasks', authenticateToken, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) {
         return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    if (req.user.id !== id && req.user.userType !== 'manager') {
+        return res.status(403).json({ error: 'Managers do not have tasks' });
     }
 
     try {
@@ -45,12 +53,15 @@ app.get('/users/:id/tasks', async (req, res) => {
     }
 });
 
-app.post('/users/:id/tasks', async (req, res) => {
+app.post('/users/:id/tasks', authenticateToken, async (req, res) => {
     const userId = Number(req.params.id);
     const newTask = req.body;
 
     if (!Number.isInteger(userId) || userId < 1) {
         return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    if (req.user.id !== userId && req.user.userType !== 'manager') {
+        return res.status(403).json({ error: 'Managers do not have tasks' });
     }
 
     if (!newTask || typeof newTask.text !== 'string' || !newTask.text.trim()) {
@@ -66,7 +77,7 @@ app.post('/users/:id/tasks', async (req, res) => {
         return res.status(201).json(taskAdded);
 });
 
-app.patch('/tasks/:id/complete', async (req, res) => {
+app.patch('/tasks/:id/complete', authenticateToken, async (req, res) => {
     const taskId = Number(req.params.id);
     if (!Number.isInteger(taskId) || taskId < 1) {
         return res.status(400).json({ error: 'Invalid task ID' });
@@ -76,6 +87,13 @@ app.patch('/tasks/:id/complete', async (req, res) => {
         return res.status(400).json({error:"body must contain boolean"})
     };
     try {
+        const ownerId = await chatbotRepositoryFunctions.getTaskOwnerId(taskId);
+        if (ownerId === null) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        if (req.user.id !== ownerId && req.user.userType !== 'manager') {
+            return res.status(403).json({ error: 'Managers do not have tasks' });
+        }
         const updatedTask = await chatbotRepositoryFunctions.updateTaskCompletion(taskId, completed);
         if (!updatedTask) {
             return res.status(404).json({ error: 'Task not found' });
