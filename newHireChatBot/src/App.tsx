@@ -1,16 +1,71 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import HomeRoute from './routes/HomeRoute.tsx'
 import LoginRoute from './routes/LoginRoute.tsx'
 import RegisterRoute from './routes/RegisterRoute.tsx'
 import PlanRoute from './routes/PlanRoute.tsx'
+import TeamRoute from './routes/TeamRoute.tsx'
+
+type AuthSession = {
+  username: string
+  userId?: number
+  role: string
+  department: string
+  token?: string
+  userType?: string
+}
+
+const SESSION_STORAGE_KEY = 'newHireChatBot.session'
+
+const EMPTY_SESSION: AuthSession = {
+  username: '',
+  userId: undefined,
+  role: '',
+  department: '',
+  token: '',
+  userType: '',
+}
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(false)
-  const [username, setUsername] = useState('')
-  const [userId, setUserId] = useState<number | undefined>(undefined)
-  const [role, setRole] = useState('')
-  const [department, setDepartment] = useState('')
+  const [session, setSession] = useState<AuthSession>(() => {
+    try {
+      const storedValue = localStorage.getItem(SESSION_STORAGE_KEY)
+
+      if (!storedValue) {
+        return EMPTY_SESSION
+      }
+
+      const parsed = JSON.parse(storedValue) as Partial<AuthSession>
+
+      return {
+        username: parsed.username ?? '',
+        userId: parsed.userId,
+        role: parsed.role ?? '',
+        department: parsed.department ?? '',
+        token: parsed.token ?? '',
+        userType: parsed.userType ?? parsed.role ?? '',
+      }
+    } catch {
+      return EMPTY_SESSION
+    }
+  })
+
+  const isAuthenticated = Boolean(
+    session.token || session.userId || session.username,
+  )
+
+  const isManager =
+    session.userType === 'manager' ||
+    session.role.toLowerCase() === 'manager'
+
+  useEffect(() => {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+  }, [session])
+
+  function clearSession() {
+    setSession(EMPTY_SESSION)
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+  }
 
   return (
     <BrowserRouter>
@@ -19,13 +74,10 @@ function App() {
           path="/"
           element={
             <HomeRoute
-              loggedIn={loggedIn}
+              loggedIn={isAuthenticated}
+              userRole={session.role}
               onSignOut={() => {
-                setLoggedIn(false)
-                setUsername('')
-                setUserId(undefined)
-                setRole('')
-                setDepartment('')
+                clearSession()
               }}
             />
           }
@@ -33,16 +85,26 @@ function App() {
         <Route
           path="/login"
           element={
-            loggedIn ? (
+            isAuthenticated ? (
               <Navigate to="/plan" replace />
             ) : (
               <LoginRoute
-                onLoginSuccess={(nextUsername, nextUserId, nextRole, nextDepartment) => {
-                  setLoggedIn(true)
-                  setUsername(nextUsername)
-                  setUserId(nextUserId)
-                  setRole(nextRole)
-                  setDepartment(nextDepartment)
+                onLoginSuccess={(
+                  nextUsername,
+                  nextUserId,
+                  nextRole,
+                  nextDepartment,
+                  nextToken,
+                  nextUserType,
+                ) => {
+                  setSession({
+                    username: nextUsername,
+                    userId: nextUserId,
+                    role: nextRole,
+                    department: nextDepartment,
+                    token: nextToken ?? '',
+                    userType: nextUserType ?? nextRole,
+                  })
                 }}
               />
             )
@@ -51,30 +113,55 @@ function App() {
         <Route
           path="/register"
           element={
-            loggedIn ? (
+            isAuthenticated ? (
               <Navigate to="/plan" replace />
             ) : (
               <RegisterRoute
-                onRegisterSuccess={(nextUsername, nextUserId, nextRole, nextDepartment) => {
-                  setLoggedIn(true)
-                  setUsername(nextUsername)
-                  setUserId(nextUserId)
-                  setRole(nextRole)
-                  setDepartment(nextDepartment)
+                onRegisterSuccess={(
+                  nextUsername,
+                  nextUserId,
+                  nextRole,
+                  nextDepartment,
+                  nextToken,
+                  nextUserType,
+                ) => {
+                  setSession({
+                    username: nextUsername,
+                    userId: nextUserId,
+                    role: nextRole,
+                    department: nextDepartment,
+                    token: nextToken ?? '',
+                    userType: nextUserType ?? nextRole,
+                  })
                 }}
               />
             )
           }
         />
         <Route
+          path="/team"
+          element={
+            isAuthenticated && isManager ? (
+              <TeamRoute
+                currentUser={session.username || 'Manager'}
+                userRole={session.role}
+              />
+            ) : isAuthenticated ? (
+              <Navigate to="/plan" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
           path="/plan"
           element={
-            loggedIn ? (
+            isAuthenticated ? (
               <PlanRoute
-                username={username}
-                userId={userId}
-                role={role}
-                department={department}
+                username={session.username}
+                userId={session.userId}
+                role={session.role}
+                department={session.department}
               />
             ) : (
               <Navigate to="/login" replace />

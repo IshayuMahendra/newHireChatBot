@@ -4,6 +4,8 @@ export type RegisterResult = {
   userId?: number
   role?: string
   department?: string
+  token?: string
+  userType?: string
 }
 
 type RegisterPayload = {
@@ -54,7 +56,12 @@ export async function registerUser(
       return { ok: false, message: serverMessage }
     }
 
-    const body = (await response.json()) as { id?: number }
+    const body = (await response.json()) as {
+      id?: number
+      token?: string
+      userType?: string
+      role?: string
+    }
 
     return {
       ok: true,
@@ -62,6 +69,8 @@ export async function registerUser(
       userId: body.id,
       role: payload.role,
       department: payload.department,
+      token: body.token,
+      userType: body.userType ?? body.role ?? payload.role,
     }
   } catch {
     return {

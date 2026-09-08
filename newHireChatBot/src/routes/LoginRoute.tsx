@@ -10,6 +10,8 @@ type LoginRouteProps = {
     userId: number | undefined,
     role: string,
     department: string,
+    token?: string,
+    userType?: string,
   ) => void
 }
 
@@ -38,6 +40,8 @@ function LoginRoute({ onLoginSuccess }: LoginRouteProps) {
         result.userId,
         result.role?.trim() ?? '',
         result.department?.trim() ?? '',
+        result.token,
+        result.userType ?? result.role,
       )
 
       setTimeout(() => {

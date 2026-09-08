@@ -1,0 +1,230 @@
+.team-shell {
+  min-height: 100vh;
+  padding: 24px 18px 30px;
+  background: #ffffff;
+  position: relative;
+}
+
+.team-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -28deg,
+    rgba(10, 26, 102, 0.22) 0 56px,
+    transparent 56px 112px
+  );
+  z-index: 0;
+}
+
+.team-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.team-header {
+  width: min(1400px, 100%);
+  margin: 0 auto 18px;
+  background: #d0271d;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #ffffff;
+}
+
+.team-eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.team-header h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 2vw, 2.1rem);
+}
+
+.team-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.team-action {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #121c4e;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.team-action.secondary {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.team-panel {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  background: #d0271d;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25);
+  padding: 18px;
+}
+
+.team-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: #ffffff;
+}
+
+.team-panel-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.team-role-badge {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 7px 12px;
+  font-weight: 700;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.team-card {
+  border: 1px solid rgba(18, 28, 78, 0.14);
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1a1a1a;
+  text-align: left;
+  padding: 18px 16px 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  min-height: 210px;
+}
+
+.team-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
+}
+
+.team-card.flagged {
+  border-color: rgba(208, 39, 29, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(208, 39, 29, 0.25);
+}
+
+.team-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.team-user-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #121c4e;
+}
+
+.team-flag {
+  display: inline-flex;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.team-flag.open {
+  background: rgba(208, 39, 29, 0.12);
+  color: #a91d15;
+}
+
+.team-flag.clear {
+  background: rgba(15, 95, 52, 0.12);
+  color: #0f5f34;
+}
+
+.team-meta {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.team-meta div {
+  display: grid;
+  gap: 2px;
+}
+
+.team-meta dt {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5b648c;
+}
+
+.team-meta dd {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+
+@media (max-width: 1200px) {
+  .team-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .team-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .team-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .team-header-actions {
+    width: 100%;
+  }
+
+  .team-action {
+    flex: 1;
+  }
+
+  .team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .team-grid {
+    grid-template-columns: 1fr;
+  }
+}

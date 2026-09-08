@@ -10,6 +10,8 @@ type RegisterRouteProps = {
     userId: number | undefined,
     role: string,
     department: string,
+    token?: string,
+    userType?: string,
   ) => void
 }
 
@@ -40,6 +42,8 @@ function RegisterRoute({ onRegisterSuccess }: RegisterRouteProps) {
         result.userId,
         result.role?.trim() ?? role.trim(),
         result.department?.trim() ?? department.trim(),
+        result.token,
+        result.userType ?? result.role,
       )
 
       setTimeout(() => {
