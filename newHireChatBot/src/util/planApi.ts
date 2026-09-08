@@ -17,6 +17,7 @@ export async function generatePlan(
   userId: number,
   role: string,
   department: string,
+  token: string,
 ): Promise<PlanResult> {
   const payload: PlanPayload = {
     user_id: userId,
@@ -35,11 +36,16 @@ export async function generatePlan(
     }
   }
 
+  if (!token) {
+    return { ok: false, message: 'Your session is missing an authentication token.' }
+  }
+
   try {
     const response = await fetch(PLAN_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     })

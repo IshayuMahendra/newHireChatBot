@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
@@ -36,7 +36,13 @@ async def ask(request: AskModel):
         raise HTTPException(status_code=500, detail=f"Model invocation failed: {exc}")
 
 @app.post("/plan")
-async def plan(request: PlanForUserModel):
+async def plan(
+    request: PlanForUserModel,
+    authorization: str | None = Header(default=None),
+):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing authentication token")
+
     try:
         narrative = invoke_PlanModel(request)
         structured = invoke_PlanModel_structured(request)
@@ -52,6 +58,7 @@ async def plan(request: PlanForUserModel):
                 response = await client.post(
                     f"{TASKS_API_BASE_URL}/users/{request.user_id}/tasks",
                     json={"text": task_text},
+                    headers={"Authorization": authorization},
                 )
 
                 if response.status_code == 201:

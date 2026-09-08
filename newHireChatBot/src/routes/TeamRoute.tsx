@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTeamUsers } from '../util/teamApi'
+import { getTeamUsers, updateFlagResolution } from '../util/teamApi'
 import './Team.css'
 
 type TeamUser = {
@@ -14,6 +14,11 @@ type TeamUser = {
   plan60Day?: string
   plan90Day?: string
   hasOpenFlag: boolean
+  flags: Array<{
+    id: number
+    reason: string
+    resolved: boolean
+  }>
 }
 
 type TeamRouteProps = {
@@ -27,6 +32,7 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
   const [users, setUsers] = useState<TeamUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [updatingFlagId, setUpdatingFlagId] = useState<number | null>(null)
 
   useEffect(() => {
     async function loadUsers() {
@@ -47,6 +53,32 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
 
     void loadUsers()
   }, [token])
+
+  async function handleFlagResolution(flagId: number, resolved: boolean) {
+    setUpdatingFlagId(flagId)
+    setError('')
+
+    const result = await updateFlagResolution(token, flagId, resolved)
+
+    if (!result.ok) {
+      setError(result.message)
+      setUpdatingFlagId(null)
+      return
+    }
+
+    setUsers((currentUsers) => currentUsers.map((user) => {
+      const flags = user.flags.map((flag) =>
+        flag.id === flagId ? { ...flag, resolved } : flag,
+      )
+
+      return {
+        ...user,
+        flags,
+        hasOpenFlag: flags.some((flag) => !flag.resolved),
+      }
+    }))
+    setUpdatingFlagId(null)
+  }
 
   return (
     <section className="team-shell">
@@ -74,11 +106,9 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
 
         <div className="team-grid" aria-label="New hire team list">
           {users.map((user) => (
-            <button
+            <article
               key={user.id}
-              type="button"
               className={`team-card ${user.hasOpenFlag ? 'flagged' : ''}`}
-              onClick={() => navigate('/plan', { state: { selectedUser: user } })}
             >
               <div className="team-card-top">
                 <span className="team-user-name">{user.username}</span>
@@ -101,7 +131,32 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
                   <dd>{user.department}</dd>
                 </div>
               </dl>
-            </button>
+
+              {user.flags.map((flag) => (
+                <div key={flag.id} className="team-flag-detail">
+                  <p>{flag.reason}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleFlagResolution(flag.id, !flag.resolved)}
+                    disabled={updatingFlagId === flag.id}
+                  >
+                    {updatingFlagId === flag.id
+                      ? 'Updating...'
+                      : flag.resolved
+                        ? 'Reopen flag'
+                        : 'Resolve flag'}
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="team-view-plan"
+                onClick={() => navigate('/plan', { state: { selectedUser: user } })}
+              >
+                View Plan
+              </button>
+            </article>
           ))}
 
           {isLoading ? (

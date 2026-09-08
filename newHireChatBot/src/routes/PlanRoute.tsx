@@ -259,6 +259,7 @@ function PlanRoute({
       userId,
       trimmedRole,
       trimmedDepartment,
+      token,
     )
 
     if (!result.ok) {

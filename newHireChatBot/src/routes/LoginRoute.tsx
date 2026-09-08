@@ -45,7 +45,7 @@ function LoginRoute({ onLoginSuccess }: LoginRouteProps) {
       )
 
       setTimeout(() => {
-        navigate('/plan')
+        navigate(result.userType === 'manager' ? '/team' : '/plan')
       }, 700)
     }
   }

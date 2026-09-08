@@ -9,12 +9,15 @@ type TeamUser = {
   plan60Day?: string
   plan90Day?: string
   hasOpenFlag: boolean
+  flags: Flag[]
 }
 
 type ApiUser = Omit<TeamUser, 'hasOpenFlag'>
 
 type Flag = {
+  id: number
   userId: string
+  reason: string
   resolved: boolean
 }
 
@@ -68,6 +71,7 @@ export async function getTeamUsers(token: string): Promise<TeamUsersResult> {
         .map((user) => ({
           ...user,
           hasOpenFlag: userIdsWithOpenFlags.has(String(user._id)),
+          flags: flags.filter((flag) => String(flag.userId) === String(user._id)),
         })),
     }
   } catch {
@@ -75,6 +79,39 @@ export async function getTeamUsers(token: string): Promise<TeamUsersResult> {
       ok: false,
       message: 'Could not reach the server. Make sure the API is running on port 3001.',
       users: [],
+    }
+  }
+}
+
+export async function updateFlagResolution(
+  token: string,
+  flagId: number,
+  resolved: boolean,
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/flags/${flagId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ resolved }),
+    })
+
+    if (!response.ok) {
+      const body = (await response.json()) as { error?: string }
+
+      return {
+        ok: false,
+        message: body.error ?? 'Could not update the flag status.',
+      }
+    }
+
+    return { ok: true, message: '' }
+  } catch {
+    return {
+      ok: false,
+      message: 'Could not reach the server. Make sure the API is running on port 3001.',
     }
   }
 }
