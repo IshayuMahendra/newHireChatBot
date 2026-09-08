@@ -1,4 +1,5 @@
 import {MongoClient} from 'mongodb';
+import jwt from 'jsonwebtoken';
 const url = 'mongodb://localhost:27017';
 const client = new MongoClient(url);
 await client.connect();
@@ -39,18 +40,11 @@ class chatbotRepositoryFunctions {
     async loginUser(username, password) {
         const user = await userCollection.findOne({ username, password });
         if (!user) {
-            return { "authenticated": false, "message": "Invalid username or password" };
+            return { authenticated: false, error: 'Invalid username or password', jwt: null};
         }
-        return {
-            "authenticated": true,
-            "message": "Successfully logged in",
-            "id": user.id,
-            "username": user.username,
-            "role": user.role,
-            "department": user.department
-        };
+        return { authenticated: true, jwt: jwt.sign({id: user.id, username: user.username, userType: user.userType, department: user.department, role: user.role}, process.env.JWT_SECRET, { expiresIn: '1h' }) };
     }
-
+//need getAllUsers()
     async addTask(userId, newTask) {
         const user = await userCollection.findOne({ id: userId });
         if (!user) {
@@ -77,6 +71,15 @@ class chatbotRepositoryFunctions {
         );
         const updatedTask = await taskCollection.findOne({ id: taskId });
         return updatedTask;
+    }
+
+    async getTaskOwnerId(taskId) {
+        const task = await taskCollection.findOne({ id: taskId });
+        if (!task) {
+            return null;
+        }
+        const owner = await userCollection.findOne({ _id: task.userId });
+        return owner ? owner.id : null;
     }
 
     async getNextUserId() {

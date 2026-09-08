@@ -27,4 +27,5 @@ __pycache__/
 # Local Python interpreter pin
 .python-version
 
-
+#server
+server/.env
