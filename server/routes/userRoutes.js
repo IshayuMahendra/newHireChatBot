@@ -14,6 +14,22 @@ router.get('/users', authenticateToken, requireManager, asyncHandler('GET /users
     return res.status(200).json(users);
 }));
 
+router.get('/users/:id', authenticateToken, asyncHandler('GET /users/:id', async (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId < 1) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    if (!isOwnerOrManager(req.user, userId)) {
+        return res.status(403).json({ error: 'Not authorized to view this user' });
+    }
+    const user = await userRepository.getUserById(userId);
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+    const { password, ...safeUser } = user;
+    return res.status(200).json(safeUser);
+}));
+
 router.get('/users/:id/tasks', authenticateToken, asyncHandler('GET /users/:id/tasks', async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) {

@@ -10,7 +10,7 @@ type PlanOverviewProps = {
   onUpdatePlanWindow: (
     window: keyof OnboardingPlan,
     text: string,
-  ) => void
+  ) => Promise<boolean>
 }
 
 const PLAN_WINDOWS: Array<{
@@ -31,22 +31,28 @@ function PlanOverview({
 }: PlanOverviewProps) {
   const [editingWindow, setEditingWindow] = useState<keyof OnboardingPlan | null>(null)
   const [draftText, setDraftText] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   function beginEdit(window: keyof OnboardingPlan) {
     setEditingWindow(window)
     setDraftText(onboardingPlan[window])
   }
 
-  function saveEdit(window: keyof OnboardingPlan) {
+  async function saveEdit(window: keyof OnboardingPlan) {
     const text = draftText.trim()
 
-    if (!text) {
+    if (!text || isSaving) {
       return
     }
 
-    onUpdatePlanWindow(window, text)
-    setEditingWindow(null)
-    setDraftText('')
+    setIsSaving(true)
+    const updated = await onUpdatePlanWindow(window, text)
+    setIsSaving(false)
+
+    if (updated) {
+      setEditingWindow(null)
+      setDraftText('')
+    }
   }
 
   return (
@@ -101,12 +107,13 @@ function PlanOverview({
                   onChange={(event) => setDraftText(event.target.value)}
                   aria-label={`Edit ${label} plan`}
                   autoFocus
+                  disabled={isSaving}
                 />
                 <div>
-                  <button type="button" onClick={() => saveEdit(key)}>
-                    Save
+                  <button type="button" onClick={() => void saveEdit(key)} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" onClick={() => setEditingWindow(null)}>
+                  <button type="button" onClick={() => setEditingWindow(null)} disabled={isSaving}>
                     Cancel
                   </button>
                 </div>

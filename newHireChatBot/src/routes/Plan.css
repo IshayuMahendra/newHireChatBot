@@ -147,6 +147,59 @@
   background: #a31c15;
 }
 
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 13, 38, 0.68);
+}
+
+.delete-modal {
+  width: min(420px, 100%);
+  border: 1px solid rgba(18, 28, 78, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+  color: #121c4e;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+}
+
+.delete-modal h3,
+.delete-modal p {
+  margin: 0;
+}
+
+.delete-modal p {
+  margin-top: 10px;
+  color: #414a70;
+  line-height: 1.45;
+}
+
+.delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.delete-modal-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 700;
+  color: #ffffff;
+  background: #121c4e;
+  cursor: pointer;
+}
+
+.delete-modal-actions .delete-modal-confirm {
+  background: #a31c15;
+}
+
 /* =========================================
    ONBOARDING PLAN
    ========================================= */
