@@ -15,6 +15,28 @@ python -m venv .venv
 pip install fastapi "uvicorn[standard]" langchain-core langchain-openai python-dotenv openai
 ```
 
+### RAG Setup
+
+From `inference-server/`, create and activate the virtual environment as above, then install every service and RAG dependency with one command:
+
+```powershell
+python -m pip install -e .
+```
+
+This installs ChromaDB, Sentence Transformers, PyPDF, and the LangChain text splitter. The first run downloads the `all-MiniLM-L6-v2` embedding model.
+
+To build the local policy index, place PDFs in `../pdf_policies/` and run:
+
+```powershell
+python .\rag\ingest.py
+```
+
+To test retrieval after ingestion:
+
+```powershell
+python .\rag\retriever.py
+```
+
 ## Environment Variables
 
 Create `.env` in this directory:
@@ -69,10 +91,10 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 ### 2. Install Dependencies
 
-Install project dependencies from `pyproject.toml`:
+Install the service and RAG dependencies from `pyproject.toml`:
 
 ```powershell
-pip install fastapi "uvicorn[standard]" langchain-core langchain-openai python-dotenv openai
+python -m pip install -e .
 ```
 
 ### 3. Configure Environment Variables

@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
 from app.schemas.onboarding import AskModel, GraphState, PlanModel, PlanNarrativeOutput, PlanStructuredOutput
-from rag import retrieve_policy_context_skeleton
+from rag.retriever import retrieve
 
 MODEL_NAME = "gpt-5.6-luna"
 
@@ -24,12 +24,20 @@ You are a welcoming onboarding assistant helping a new hire feel supported and c
 - Current plan: {current_plan}
 - Retrieval status: {rag_status}
 - Retrieved sources: {rag_sources}
-- User question: {user_prompt}
+
+## Retrieved policy context
+{rag_context}
+
+## User question
+{user_prompt}
 
 ## Response guidelines
 - Use a warm, encouraging, human tone.
 - Provide practical, concise guidance.
 - Tailor advice to the role and department.
+- For questions about company policies, procedures, requirements, or rules, use the retrieved policy context.
+- Do not invent policy information that is not supported by the retrieved context.
+- If the retrieved policy context does not contain enough information to answer a policy question, say that the information was not found in the available policy documents.
 - For any question about tasks, answer from Current tasks first.
 - Current tasks lines may include metadata in this format: id=<id>; status=<status>; phase=<phase>; text=<task>; createdAt=<timestamp>.
 - If asked about a window like Week 1, filter tasks by matching phase before giving general advice.
@@ -71,6 +79,7 @@ Return five concise narrative paragraphs for the onboarding plan.
 - Use a supportive, practical, human tone.
 """
 )
+
 
 PLAN_STRUCTURED_PROMPT_TEMPLATE = PromptTemplate.from_template(
     """# Structured New Hire Onboarding Planner
@@ -160,11 +169,30 @@ def _build_prompt_payload(state: GraphState) -> dict[str, str | int]:
         "role": state["role"],
         "department": state["department"],
         "onboarding_day": int(state.get("onboarding_day", 1)),
-        "current_tasks": _format_current_tasks(state.get("current_tasks", [])),
-        "current_plan": _format_current_plan(state.get("current_plan", {})),
-        "rag_status": str(state.get("rag_status", "skeleton")),
-        "rag_sources": ", ".join(state.get("rag_sources", [])) or "None",
-        "user_prompt": str(state.get("user_prompt", "")),
+
+        "current_tasks": _format_current_tasks(
+            state.get("current_tasks", [])
+        ),
+
+        "current_plan": _format_current_plan(
+            state.get("current_plan", {})
+        ),
+
+        "rag_status": str(
+            state.get("rag_status", "not_retrieved")
+        ),
+
+        "rag_sources": ", ".join(
+            state.get("rag_sources", [])
+        ) or "None",
+
+        "rag_context": "\n\n".join(
+            state.get("rag_chunks", [])
+        ) or "None",
+
+        "user_prompt": str(
+            state.get("user_prompt", "")
+        ),
     }
 
 
@@ -188,13 +216,44 @@ def _gather_context_node(state: GraphState) -> GraphState:
     }
 
 
-def _rag_skeleton_node(state: GraphState) -> GraphState:
-    rag_result = retrieve_policy_context_skeleton(state)
+def _rag_retrieve_node(state: GraphState) -> GraphState:
+    question = str(state.get("user_prompt", "")).strip()
+
+    if not question:
+        return {
+            "rag_status": "no_question",
+            "rag_confidence": 0.0,
+            "rag_sources": [],
+            "rag_chunks": [],
+        }
+
+    results = retrieve(
+        question,
+        k=3,
+    )
+
+    documents = results["documents"][0]
+    metadatas = results["metadatas"][0]
+    distances = results["distances"][0]
+
+    sources = []
+
+    for metadata in metadatas:
+        source = metadata.get("source", "Unknown source")
+        chunk = metadata.get("chunk")
+
+        if chunk is not None:
+            sources.append(
+                f"{source} - chunk {chunk}"
+            )
+        else:
+            sources.append(source)
+
     return {
-        "rag_status": str(rag_result.get("rag_status", "skeleton")),
-        "rag_confidence": float(rag_result.get("rag_confidence", 0.0)),
-        "rag_sources": list(rag_result.get("rag_sources", [])),
-        "rag_chunks": list(rag_result.get("rag_chunks", [])),
+        "rag_status": "retrieved",
+        "rag_confidence": 1.0,
+        "rag_sources": sources,
+        "rag_chunks": documents,
     }
 
 
@@ -228,20 +287,21 @@ def _generate_plan_node(state: GraphState) -> GraphState:
 def _build_graph():
     builder = StateGraph(GraphState)
     builder.add_node("gather_context", _gather_context_node)
-    builder.add_node("rag_retrieve_skeleton", _rag_skeleton_node)
+    builder.add_node("rag_retrieve", _rag_retrieve_node)
     builder.add_node("generate_ask", _generate_ask_node)
     builder.add_node("generate_plan", _generate_plan_node)
 
     builder.add_edge(START, "gather_context")
-    builder.add_edge("gather_context", "rag_retrieve_skeleton")
+    builder.add_edge("gather_context", "rag_retrieve")
+    
     builder.add_conditional_edges(
-        "rag_retrieve_skeleton",
-        _route_workflow,
-        {
-            "generate_ask": "generate_ask",
-            "generate_plan": "generate_plan",
-        },
-    )
+    "rag_retrieve",
+    _route_workflow,
+    {
+        "generate_ask": "generate_ask",
+        "generate_plan": "generate_plan",
+    },
+)
     builder.add_edge("generate_ask", END)
     builder.add_edge("generate_plan", END)
     return builder.compile()

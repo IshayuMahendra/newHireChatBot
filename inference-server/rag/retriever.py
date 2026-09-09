@@ -1,5 +1,4 @@
 from pathlib import Path
-from retriever import retrieve
 import chromadb
 from sentence_transformers import SentenceTransformer
 

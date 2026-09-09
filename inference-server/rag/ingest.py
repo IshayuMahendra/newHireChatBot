@@ -73,7 +73,7 @@ def main():
     all_chunks = []
 
     
-    #Extract, clean, and chunk PDFs
+    
     
 
     for pdf_path in pdf_files:
@@ -105,7 +105,7 @@ def main():
             f"Chunks: {len(chunks)}"
         )
 
-        # Attach metadata to each chunk
+        #Attach metadata to each chunk
        
 
         for chunk_number, chunk_text in enumerate(
@@ -173,7 +173,7 @@ def main():
     )
 
 
-    # Create or load collection
+    #Create or load collection
     
 
     collection = (
@@ -207,7 +207,7 @@ def main():
     ]
 
     
-    # Store everything in ChromaDB
+    #Storing everything in ChromaDB
     
 
     collection.upsert(
@@ -222,9 +222,9 @@ def main():
         "chunks in ChromaDB."
     )
 
-    # -----------------------------
-    # STEP 11: VERIFY CHROMA DB
-    # -----------------------------
+    
+    #Chroma verification
+    
 
     print("\n--- CHROMA VERIFICATION ---")
 
