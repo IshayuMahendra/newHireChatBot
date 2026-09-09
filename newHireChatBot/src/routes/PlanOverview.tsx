@@ -17,6 +17,8 @@ const PLAN_WINDOWS: Array<{
   key: keyof OnboardingPlan
   label: string
 }> = [
+  { key: 'week1Outcome', label: 'Week 1' },
+  { key: 'week2_4Outcome', label: 'Weeks 2-4' },
   { key: 'plan30Day', label: 'First 30 Days' },
   { key: 'plan60Day', label: 'Days 31-60' },
   { key: 'plan90Day', label: 'Days 61-90' },
@@ -63,28 +65,6 @@ function PlanOverview({
       <h2>Onboarding Plan</h2>
 
       <div className="plan-overview-scroll">
-        <article className="plan-window">
-          <div className="plan-window-heading">
-            <h3>Week 1</h3>
-          </div>
-          {narrativePlan?.week_1 ? (
-            <p className="plan-response">{narrativePlan.week_1}</p>
-          ) : (
-            <p className="plan-window-empty">No narrative has been saved for Week 1 yet.</p>
-          )}
-        </article>
-
-        <article className="plan-window">
-          <div className="plan-window-heading">
-            <h3>Weeks 2-4</h3>
-          </div>
-          {narrativePlan?.week_2_4 ? (
-            <p className="plan-response">{narrativePlan.week_2_4}</p>
-          ) : (
-            <p className="plan-window-empty">No narrative has been saved for Weeks 2-4 yet.</p>
-          )}
-        </article>
-
         {PLAN_WINDOWS.map(({ key, label }) => (
           <article key={key} className="plan-window">
             <div className="plan-window-heading">

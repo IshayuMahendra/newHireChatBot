@@ -160,6 +160,17 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
               >
                 View Plan
               </button>
+              <button
+                type="button"
+                className="team-view-plan"
+                onClick={() =>
+                  navigate(`/dashboard?userId=${user.id}`, {
+                    state: { selectedUser: user },
+                  })
+                }
+              >
+                View Dashboard
+              </button>
             </article>
           ))}
 

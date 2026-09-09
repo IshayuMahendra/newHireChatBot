@@ -24,6 +24,8 @@ export type CompletedTask = {
 }
 
 export type OnboardingPlan = {
+  week1Outcome: string
+  week2_4Outcome: string
   plan30Day: string
   plan60Day: string
   plan90Day: string
@@ -51,6 +53,8 @@ type SelectedUser = {
   username: string
   role: string
   department: string
+  week1Outcome?: string
+  week2_4Outcome?: string
   plan30Day?: string
   plan60Day?: string
   plan90Day?: string
@@ -233,6 +237,8 @@ function PlanRoute({
   const [planResponse, setPlanResponse] = useState('')
   const [narrativePlan, setNarrativePlan] = useState<NarrativePlan | null>(null)
   const [onboardingPlan, setOnboardingPlan] = useState<OnboardingPlan>({
+    week1Outcome: '',
+    week2_4Outcome: '',
     plan30Day: '',
     plan60Day: '',
     plan90Day: '',
@@ -373,6 +379,8 @@ function PlanRoute({
 
   useEffect(() => {
     setOnboardingPlan({
+      week1Outcome: selectedUser?.week1Outcome ?? '',
+      week2_4Outcome: selectedUser?.week2_4Outcome ?? '',
       plan30Day: selectedUser?.plan30Day ?? '',
       plan60Day: selectedUser?.plan60Day ?? '',
       plan90Day: selectedUser?.plan90Day ?? '',
@@ -400,6 +408,8 @@ function PlanRoute({
 
         const user = (await response.json()) as SelectedUser
         setOnboardingPlan({
+          week1Outcome: user.week1Outcome ?? '',
+          week2_4Outcome: user.week2_4Outcome ?? '',
           plan30Day: user.plan30Day ?? '',
           plan60Day: user.plan60Day ?? '',
           plan90Day: user.plan90Day ?? '',
@@ -440,7 +450,11 @@ function PlanRoute({
       trimmedDepartment,
       1,
       buildPlanTaskPayload(pendingTasks, completedTasks),
-      onboardingPlan,
+      {
+        plan30Day: onboardingPlan.plan30Day,
+        plan60Day: onboardingPlan.plan60Day,
+        plan90Day: onboardingPlan.plan90Day,
+      },
       token,
     )
 
@@ -454,6 +468,8 @@ function PlanRoute({
     setNarrativePlan(result.narrativePlan ?? null)
     if (result.narrativePlan) {
       setOnboardingPlan({
+        week1Outcome: result.narrativePlan.week_1,
+        week2_4Outcome: result.narrativePlan.week_2_4,
         plan30Day: result.narrativePlan.day_30,
         plan60Day: result.narrativePlan.day_60,
         plan90Day: result.narrativePlan.day_90,

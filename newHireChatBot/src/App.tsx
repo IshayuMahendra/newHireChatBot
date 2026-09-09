@@ -156,14 +156,15 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            isAuthenticated && !isManager ? (
+            isAuthenticated ? (
               <DashboardRoute
                 username={session.username}
+                userId={session.userId}
                 role={session.role}
                 department={session.department}
+                token={session.token ?? ''}
+                canManageDashboard={isManager}
               />
-            ) : isAuthenticated ? (
-              <Navigate to="/team" replace />
             ) : (
               <Navigate to="/login" replace />
             )
