@@ -32,16 +32,22 @@ function PlanTaskList({
   const [draftTaskText, setDraftTaskText] = useState('')
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editingTaskText, setEditingTaskText] = useState('')
+  const [isSavingTask, setIsSavingTask] = useState(false)
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null)
+  const [taskPendingDelete, setTaskPendingDelete] = useState<EditableTask | null>(null)
+  const [togglingTaskId, setTogglingTaskId] = useState<number | null>(null)
 
   async function submitNewTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = draftTaskText.trim()
 
-    if (!text) {
+    if (!text || isSavingTask) {
       return
     }
 
+    setIsSavingTask(true)
     const added = await onAddTask(text)
+    setIsSavingTask(false)
 
     if (added) {
       setDraftTaskText('')
@@ -53,11 +59,13 @@ function PlanTaskList({
     event.preventDefault()
     const text = editingTaskText.trim()
 
-    if (editingTaskId === null || !text) {
+    if (editingTaskId === null || !text || isSavingTask) {
       return
     }
 
+    setIsSavingTask(true)
     const updated = await onEditTask(editingTaskId, text)
+    setIsSavingTask(false)
 
     if (updated) {
       setEditingTaskId(null)
@@ -68,6 +76,35 @@ function PlanTaskList({
   function beginTaskEdit(taskId: number, text: string) {
     setEditingTaskId(taskId)
     setEditingTaskText(text)
+  }
+
+  async function toggleTask(taskId: number, completed: boolean) {
+    if (togglingTaskId !== null) {
+      return
+    }
+
+    setTogglingTaskId(taskId)
+    await onToggleTask(taskId, completed)
+    setTogglingTaskId(null)
+  }
+
+  function requestDeleteTask(task: EditableTask) {
+    if (deletingTaskId !== null) {
+      return
+    }
+
+    setTaskPendingDelete(task)
+  }
+
+  async function confirmDeleteTask() {
+    if (!taskPendingDelete || deletingTaskId !== null) {
+      return
+    }
+
+    setDeletingTaskId(taskPendingDelete.id)
+    await onDeleteTask(taskPendingDelete.id)
+    setDeletingTaskId(null)
+    setTaskPendingDelete(null)
   }
 
   return (
@@ -87,6 +124,7 @@ function PlanTaskList({
             type="button"
             className="task-manager-button"
             onClick={() => setIsAddingTask(true)}
+            disabled={isAddingTask}
           >
             Add Task
           </button>
@@ -99,9 +137,12 @@ function PlanTaskList({
                 placeholder="Describe the task"
                 aria-label="New task description"
                 autoFocus
+                disabled={isSavingTask}
               />
-              <button type="submit">Save</button>
-              <button type="button" onClick={() => setIsAddingTask(false)}>
+              <button type="submit" disabled={isSavingTask}>
+                {isSavingTask ? 'Saving...' : 'Save'}
+              </button>
+              <button type="button" onClick={() => setIsAddingTask(false)} disabled={isSavingTask}>
                 Cancel
               </button>
             </form>
@@ -139,12 +180,13 @@ function PlanTaskList({
                     type="checkbox"
                     checked={false}
                     onChange={(event) =>
-                      void onToggleTask(
+                      void toggleTask(
                         task.id,
                         event.target.checked,
                       )
                     }
                     aria-label={`Mark ${task.text} complete`}
+                    disabled={togglingTaskId === task.id}
                   />
 
                   <span>
@@ -163,7 +205,9 @@ function PlanTaskList({
                     onStartEdit={beginTaskEdit}
                     onSaveEdit={submitTaskEdit}
                     onCancelEdit={() => setEditingTaskId(null)}
-                    onDelete={onDeleteTask}
+                    onDelete={requestDeleteTask}
+                    isSaving={isSavingTask}
+                    isDeleting={deletingTaskId === task.id}
                   />
                 ) : null}
 
@@ -217,7 +261,9 @@ function PlanTaskList({
                     onStartEdit={beginTaskEdit}
                     onSaveEdit={submitTaskEdit}
                     onCancelEdit={() => setEditingTaskId(null)}
-                    onDelete={onDeleteTask}
+                    onDelete={requestDeleteTask}
+                    isSaving={isSavingTask}
+                    isDeleting={deletingTaskId === task.id}
                   />
                 ) : null}
 
@@ -228,7 +274,8 @@ function PlanTaskList({
                 <button
                   type="button"
                   className="completed-action-button"
-                  onClick={() => void onToggleTask(task.id, false)}
+                  onClick={() => void toggleTask(task.id, false)}
+                  disabled={togglingTaskId === task.id}
                 >
                   Mark as Pending
                 </button>
@@ -243,6 +290,41 @@ function PlanTaskList({
           </div>
         </section>
       </div>
+
+      {taskPendingDelete ? (
+        <div className="delete-modal-overlay">
+          <section
+            className="delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            aria-describedby="delete-modal-description"
+          >
+            <h3 id="delete-modal-title">Delete task?</h3>
+            <p id="delete-modal-description">
+              This will permanently remove &quot;{taskPendingDelete.text}&quot;.
+            </p>
+            <div className="delete-modal-actions">
+              <button
+                type="button"
+                onClick={() => setTaskPendingDelete(null)}
+                disabled={deletingTaskId !== null}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="delete-modal-confirm"
+                onClick={() => void confirmDeleteTask()}
+                disabled={deletingTaskId !== null}
+                autoFocus
+              >
+                {deletingTaskId !== null ? 'Deleting...' : 'Delete task'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -257,7 +339,9 @@ type TaskManagerActionsProps = {
   onStartEdit: (taskId: number, text: string) => void
   onSaveEdit: (event: FormEvent<HTMLFormElement>) => Promise<void>
   onCancelEdit: () => void
-  onDelete: (taskId: number) => void
+  onDelete: (task: EditableTask) => void
+  isSaving: boolean
+  isDeleting: boolean
 }
 
 function TaskManagerActions({
@@ -269,6 +353,8 @@ function TaskManagerActions({
   onSaveEdit,
   onCancelEdit,
   onDelete,
+  isSaving,
+  isDeleting,
 }: TaskManagerActionsProps) {
   if (editingTaskId === task.id) {
     return (
@@ -278,9 +364,12 @@ function TaskManagerActions({
           onChange={(event) => onEditingTaskTextChange(event.target.value)}
           aria-label={`Edit ${task.text}`}
           autoFocus
+          disabled={isSaving}
         />
-        <button type="submit">Save</button>
-        <button type="button" onClick={onCancelEdit}>
+        <button type="submit" disabled={isSaving}>
+          {isSaving ? 'Saving...' : 'Save'}
+        </button>
+        <button type="button" onClick={onCancelEdit} disabled={isSaving}>
           Cancel
         </button>
       </form>
@@ -289,11 +378,11 @@ function TaskManagerActions({
 
   return (
     <div className="task-manager-actions">
-      <button type="button" onClick={() => onStartEdit(task.id, task.text)}>
+      <button type="button" onClick={() => onStartEdit(task.id, task.text)} disabled={isDeleting}>
         Edit
       </button>
-      <button type="button" onClick={() => onDelete(task.id)}>
-        Delete
+      <button type="button" onClick={() => void onDelete(task)} disabled={isDeleting}>
+        {isDeleting ? 'Deleting...' : 'Delete'}
       </button>
     </div>
   )

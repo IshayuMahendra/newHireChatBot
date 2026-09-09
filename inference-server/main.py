@@ -151,6 +151,42 @@ async def _fetch_current_tasks_for_user(user_id: int, authorization: str) -> lis
     return [_format_task_context_line(task) for task in tasks if str(task.get("text", "")).strip()]
 
 
+async def _save_narrative_plan(user_id: int, narrative_plan, authorization: str) -> None:
+    plan_windows = {
+        "plan30Day": narrative_plan.day_30,
+        "plan60Day": narrative_plan.day_60,
+        "plan90Day": narrative_plan.day_90,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            for field_name, text in plan_windows.items():
+                response = await client.patch(
+                    f"{TASKS_API_BASE_URL}/users/{user_id}/{field_name}",
+                    json={field_name: text},
+                    headers={"Authorization": authorization},
+                )
+
+                if response.status_code == 200:
+                    continue
+
+                if response.status_code == 404:
+                    raise HTTPException(status_code=404, detail="User not found in onboarding API")
+
+                if response.status_code in {400, 401, 403}:
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=_extract_upstream_error_detail(response, "Could not save generated plan"),
+                    )
+
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Plan sync failed with status {response.status_code}",
+                )
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not reach onboarding API: {exc}")
+
+
 @app.post("/plan")
 async def plan(
     request: PlanForUserModel,
@@ -201,6 +237,8 @@ async def plan(
         if isinstance(exc, HTTPException):
             raise exc
         raise HTTPException(status_code=500, detail=f"Task sync failed: {exc}")
+
+    await _save_narrative_plan(request.user_id, narrative_plan, normalized_auth)
 
     return {
         "response": narrative,
@@ -313,6 +351,8 @@ async def update_plan(
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Task sync failed: {exc}")
+
+    await _save_narrative_plan(request.user_id, narrative_plan, normalized_auth)
 
     return {
         "response": narrative,

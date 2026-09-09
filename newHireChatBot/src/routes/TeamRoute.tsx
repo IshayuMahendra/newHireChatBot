@@ -152,7 +152,11 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
               <button
                 type="button"
                 className="team-view-plan"
-                onClick={() => navigate('/plan', { state: { selectedUser: user } })}
+                onClick={() =>
+                  navigate(`/plan?userId=${user.id}`, {
+                    state: { selectedUser: user },
+                  })
+                }
               >
                 View Plan
               </button>

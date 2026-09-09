@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { askAssistant } from '../util/askApi.ts'
 import { generatePlan } from '../util/planApi'
 import './Plan.css'
@@ -56,6 +56,10 @@ type SelectedUser = {
   plan90Day?: string
 }
 
+type ApiUser = SelectedUser & {
+  userType: string
+}
+
 type ApiTask = {
   id: number
   text: string
@@ -77,6 +81,27 @@ const PHASE_ORDER: Record<string, number> = {
 }
 
 const API_BASE_URL = 'http://localhost:3001'
+
+async function getApiError(
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  try {
+    const body = (await response.json()) as {
+      error?: string
+      detail?: string
+    }
+    const message = body.error ?? body.detail
+
+    if (message) {
+      return `${message} (HTTP ${response.status})`
+    }
+  } catch {
+    // Use the operation-specific fallback when the response is not JSON.
+  }
+
+  return `${fallbackMessage} (HTTP ${response.status})`
+}
 
 function formatCompletedDate(timestamp?: string): string {
   if (!timestamp) {
@@ -174,8 +199,17 @@ function PlanRoute({
 }: PlanRouteProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const selectedUser = (location.state as { selectedUser?: SelectedUser } | null)
+  const [searchParams] = useSearchParams()
+  const selectedUserFromRoute = (location.state as { selectedUser?: SelectedUser } | null)
     ?.selectedUser
+  const selectedUserId = Number(searchParams.get('userId'))
+  const hasSelectedUserId = Number.isInteger(selectedUserId) && selectedUserId > 0
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(
+    selectedUserFromRoute ?? null,
+  )
+  const [loadingSelectedUser, setLoadingSelectedUser] = useState(
+    canManageTasks && hasSelectedUserId,
+  )
   const targetUser = selectedUser ?? {
     id: userId,
     username,
@@ -204,6 +238,65 @@ function PlanRoute({
     plan90Day: '',
   })
 
+  useEffect(() => {
+    if (!canManageTasks || !hasSelectedUserId) {
+      setSelectedUser(null)
+      setLoadingSelectedUser(false)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadSelectedUser() {
+      setLoadingSelectedUser(true)
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setTaskError(
+              await getApiError(response, 'Could not load the selected user.'),
+            )
+            setSelectedUser(null)
+          }
+          return
+        }
+
+        const users = (await response.json()) as ApiUser[]
+        const user = users.find(
+          (candidate) => candidate.id === selectedUserId && candidate.userType === 'new_hire',
+        )
+
+        if (!cancelled) {
+          setSelectedUser(user ?? null)
+          if (!user) {
+            setTaskError('The selected new hire could not be found.')
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setTaskError('Could not load the selected user.')
+          setSelectedUser(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingSelectedUser(false)
+        }
+      }
+    }
+
+    void loadSelectedUser()
+
+    return () => {
+      cancelled = true
+    }
+  }, [canManageTasks, hasSelectedUserId, selectedUserFromRoute, selectedUserId, token])
+
   const loadTasks = useCallback(
     async (targetUserId: number) => {
       setLoadingTasks(true)
@@ -222,7 +315,9 @@ function PlanRoute({
         if (!response.ok) {
           setPendingTasks([])
           setCompletedTasks([])
-          setTaskError('Could not load tasks from the server.')
+          setTaskError(
+            await getApiError(response, 'Could not load tasks from the server.'),
+          )
           return
         }
 
@@ -261,6 +356,10 @@ function PlanRoute({
   )
 
   useEffect(() => {
+    if (loadingSelectedUser) {
+      return
+    }
+
     if (!targetUser.id) {
       setPendingTasks([])
       setCompletedTasks([])
@@ -270,7 +369,7 @@ function PlanRoute({
     }
 
     void loadTasks(targetUser.id)
-  }, [targetUser.id, loadTasks])
+  }, [loadingSelectedUser, targetUser.id, loadTasks])
 
   useEffect(() => {
     setOnboardingPlan({
@@ -279,6 +378,43 @@ function PlanRoute({
       plan90Day: selectedUser?.plan90Day ?? '',
     })
   }, [selectedUser])
+
+  useEffect(() => {
+    if (loadingSelectedUser || !targetUser.id) {
+      return
+    }
+
+    let cancelled = false
+
+    async function loadSavedPlan() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${targetUser.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok || cancelled) {
+          return
+        }
+
+        const user = (await response.json()) as SelectedUser
+        setOnboardingPlan({
+          plan30Day: user.plan30Day ?? '',
+          plan60Day: user.plan60Day ?? '',
+          plan90Day: user.plan90Day ?? '',
+        })
+      } catch {
+        // Keep any plan data already supplied by the selected-user route state.
+      }
+    }
+
+    void loadSavedPlan()
+
+    return () => {
+      cancelled = true
+    }
+  }, [loadingSelectedUser, targetUser.id, token])
 
   async function handleGeneratePlan() {
     if (!userId) {
@@ -348,7 +484,9 @@ function PlanRoute({
       )
 
       if (!response.ok) {
-        setTaskError('Could not update task status in the server.')
+        setTaskError(
+          await getApiError(response, 'Could not update task status in the server.'),
+        )
         return
       }
 
@@ -379,7 +517,9 @@ function PlanRoute({
       )
 
       if (!response.ok) {
-        setTaskError('Could not add the task to the server.')
+        setTaskError(
+          await getApiError(response, 'Could not add the task to the server.'),
+        )
         return false
       }
 
@@ -404,7 +544,9 @@ function PlanRoute({
       })
 
       if (!response.ok) {
-        setTaskError('Could not update the task in the server.')
+        setTaskError(
+          await getApiError(response, 'Could not update the task in the server.'),
+        )
         return false
       }
 
@@ -427,7 +569,9 @@ function PlanRoute({
       })
 
       if (!response.ok) {
-        setTaskError('Could not delete the task from the server.')
+        setTaskError(
+          await getApiError(response, 'Could not delete the task from the server.'),
+        )
         return
       }
 
@@ -438,14 +582,45 @@ function PlanRoute({
     }
   }
 
-  function updatePlanWindow(
+  async function updatePlanWindow(
     window: keyof OnboardingPlan,
     text: string,
-  ) {
-    setOnboardingPlan((currentPlan) => ({
-      ...currentPlan,
-      [window]: text,
-    }))
+  ): Promise<boolean> {
+    if (!targetUser.id) {
+      setTaskError('No user loaded. Please log in again.')
+      return false
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/users/${targetUser.id}/${window}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ [window]: text }),
+        },
+      )
+
+      if (!response.ok) {
+        setTaskError(
+          await getApiError(response, 'Could not update the plan in the server.'),
+        )
+        return false
+      }
+
+      setOnboardingPlan((currentPlan) => ({
+        ...currentPlan,
+        [window]: text,
+      }))
+      setTaskError('')
+      return true
+    } catch {
+      setTaskError('Could not update the plan in the server.')
+      return false
+    }
   }
 
   async function handleAsk(event: FormEvent<HTMLFormElement>) {
