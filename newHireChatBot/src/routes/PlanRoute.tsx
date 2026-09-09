@@ -548,7 +548,7 @@ function PlanRoute({
     }
   }
 
-  async function editTask(taskId: number, text: string) {
+  async function editTask(taskId: number, phase: string, text: string) {
     try {
       const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: 'PATCH',
@@ -556,7 +556,7 @@ function PlanRoute({
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: `[${phase}] ${text}` }),
       })
 
       if (!response.ok) {

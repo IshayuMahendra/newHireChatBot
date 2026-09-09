@@ -12,7 +12,7 @@ type PlanTaskListProps = {
   onToggleTask: (taskId: number, completed: boolean) => Promise<void> | void
   canManageTasks: boolean
   onAddTask: (text: string) => Promise<boolean>
-  onEditTask: (taskId: number, text: string) => Promise<boolean>
+  onEditTask: (taskId: number, phase: string, text: string) => Promise<boolean>
   onDeleteTask: (taskId: number) => Promise<void>
 }
 
@@ -31,6 +31,7 @@ function PlanTaskList({
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [draftTaskText, setDraftTaskText] = useState('')
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+  const [editingTaskPhase, setEditingTaskPhase] = useState('')
   const [editingTaskText, setEditingTaskText] = useState('')
   const [isSavingTask, setIsSavingTask] = useState(false)
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null)
@@ -64,17 +65,19 @@ function PlanTaskList({
     }
 
     setIsSavingTask(true)
-    const updated = await onEditTask(editingTaskId, text)
+    const updated = await onEditTask(editingTaskId, editingTaskPhase, text)
     setIsSavingTask(false)
 
     if (updated) {
       setEditingTaskId(null)
+      setEditingTaskPhase('')
       setEditingTaskText('')
     }
   }
 
-  function beginTaskEdit(taskId: number, text: string) {
+  function beginTaskEdit(taskId: number, phase: string, text: string) {
     setEditingTaskId(taskId)
+    setEditingTaskPhase(phase)
     setEditingTaskText(text)
   }
 
@@ -336,7 +339,7 @@ type TaskManagerActionsProps = {
   editingTaskId: number | null
   editingTaskText: string
   onEditingTaskTextChange: (text: string) => void
-  onStartEdit: (taskId: number, text: string) => void
+  onStartEdit: (taskId: number, phase: string, text: string) => void
   onSaveEdit: (event: FormEvent<HTMLFormElement>) => Promise<void>
   onCancelEdit: () => void
   onDelete: (task: EditableTask) => void
@@ -378,7 +381,7 @@ function TaskManagerActions({
 
   return (
     <div className="task-manager-actions">
-      <button type="button" onClick={() => onStartEdit(task.id, task.text)} disabled={isDeleting}>
+      <button type="button" onClick={() => onStartEdit(task.id, task.phase, task.text)} disabled={isDeleting}>
         Edit
       </button>
       <button type="button" onClick={() => void onDelete(task)} disabled={isDeleting}>
