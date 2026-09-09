@@ -1,6 +1,24 @@
 import { taskCollection, userCollection } from '../db.js';
 import { getNextId } from '../utils/idGenerator.js';
 
+function preserveTaskPhase(taskText, replacementText) {
+    const trimmed = String(replacementText ?? '').trim();
+    if (!trimmed) {
+        return trimmed;
+    }
+
+    const phaseMatch = String(taskText ?? '').match(/^\[(.+?)\]\s*(.*)$/);
+    if (phaseMatch) {
+        const [, phase] = phaseMatch;
+        const replacementMatch = trimmed.match(/^\[(.+?)\]\s*(.*)$/);
+        if (!replacementMatch) {
+            return `[${phase}] ${trimmed}`;
+        }
+    }
+
+    return trimmed;
+}
+
 export const taskRepository = {
     async getUserTasks(userId) {
         const user = await userCollection.findOne({ id: userId });
@@ -59,9 +77,15 @@ export const taskRepository = {
     },
 
     async updateTaskText(taskId, newText) {
+        const existingTask = await taskCollection.findOne({ id: taskId });
+        if (!existingTask) {
+            return null;
+        }
+
+        const normalizedText = preserveTaskPhase(existingTask.text, newText);
         await taskCollection.updateOne(
             { id: taskId },
-            { $set: { text: newText } }
+            { $set: { text: normalizedText } }
         );
         return await taskCollection.findOne({ id: taskId });
     },
