@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import taskRepository from '../repositories/taskRepository.js';
+import eventRepository from '../repositories/eventRepository.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isOwnerOrManager } from '../utils/authorization.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
