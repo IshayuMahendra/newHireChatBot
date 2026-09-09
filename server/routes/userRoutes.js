@@ -93,6 +93,7 @@ router.patch('/users/:id/plan30Day', authenticateToken, asyncHandler('PATCH /use
             type: 'plan30Day_updated',
             detail: `30-day plan updated: ${plan30Day}`,
         });
+        
         return res.status(200).json(updatedUser);
     }));
 
