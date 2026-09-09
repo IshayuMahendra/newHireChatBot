@@ -44,6 +44,29 @@ export const userRepository = {
             return null;
         }
         return await userCollection.findOne({ id: userId });
+    },
+    async updateUserPlan60Day(userId, plan60Day) {
+        const result = await userCollection.updateOne(
+            { id: userId },
+            { $set: { plan60Day } }
+        );
+        if (result.matchedCount === 0) {
+            return null;
+        }
+        return await userCollection.findOne({ id: userId });
+    },
+    async updateUserPlan90Day(userId, plan90Day) {
+        const result = await userCollection.updateOne(
+            { id: userId },
+            { $set: { plan90Day } }
+        );
+        if (result.matchedCount === 0) {
+            return null;
+        }
+        return await userCollection.findOne({ id: userId });
+    },
+    async getUserById(userId) {
+        return await userCollection.findOne({ id: userId });
     }
 };
 
