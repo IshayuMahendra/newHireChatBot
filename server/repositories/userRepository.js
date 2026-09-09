@@ -35,6 +35,16 @@ export const userRepository = {
         }
         return { authenticated: true, jwt: signAuthToken(user) };
     },
+    async updateUserPlan30Day(userId, plan30Day) {
+        const result = await userCollection.updateOne(
+            { id: userId },
+            { $set: { plan30Day } }
+        );
+        if (result.matchedCount === 0) {
+            return null;
+        }
+        return await userCollection.findOne({ id: userId });
+    }
 };
 
 export default userRepository;

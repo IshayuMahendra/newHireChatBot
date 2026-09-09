@@ -58,4 +58,26 @@ router.post('/users/:id/tasks', authenticateToken, asyncHandler('POST /users/:id
     return res.status(201).json(taskAdded);
 }));
 
+router.patch('/users/:id/plan30Day', authenticateToken, asyncHandler('PATCH /users/:id/plan30Day', async (req, res) => {
+    const userId = Number(req.params.id);
+        if (!Number.isInteger(userId) || userId < 1) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        const { plan30Day } = req.body;
+        if (typeof plan30Day !== 'string') {
+            return res.status(400).json({ error: 'Body must contain string' });
+        }
+        const user = await userRepository.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const updatedUser = await userRepository.updateUserPlan30Day(userId, plan30Day);
+        await eventRepository.addEvent({
+            userId: user.id,
+            type: 'plan30Day_updated',
+            detail: `30-day plan updated: ${plan30Day}`,
+        });
+        return res.status(200).json(updatedUser);
+    }));
+
 export default router;
