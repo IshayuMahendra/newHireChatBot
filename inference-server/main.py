@@ -106,7 +106,19 @@ def _format_task_context_line(task: dict) -> str:
     return f"id={task_id}; status={status}; phase={phase}; text={text}; createdAt={created_at}"
 
 
-async def _fetch_current_tasks_for_user(user_id: int, authorization: str) -> list[str]:
+def _extract_upstream_error_detail(response: httpx.Response, fallback: str) -> str:
+    try:
+        payload = response.json()
+        if isinstance(payload, dict):
+            detail = payload.get("error") or payload.get("detail")
+            if isinstance(detail, str) and detail.strip():
+                return detail
+    except ValueError:
+        pass
+    return fallback
+
+
+async def _fetch_tasks_for_user(user_id: int, authorization: str) -> list[dict]:
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.get(
@@ -120,15 +132,22 @@ async def _fetch_current_tasks_for_user(user_id: int, authorization: str) -> lis
         raise HTTPException(status_code=404, detail="User not found in onboarding API")
 
     if response.status_code in {401, 403}:
-        raise HTTPException(status_code=response.status_code, detail="Could not load task context for this user")
+        raise HTTPException(status_code=response.status_code, detail="Could not load tasks for this user")
 
     if response.status_code != 200:
         raise HTTPException(
             status_code=502,
-            detail=f"Task context fetch failed with status {response.status_code}",
+            detail=f"Task fetch failed with status {response.status_code}",
         )
 
     tasks = response.json()
+    if not isinstance(tasks, list):
+        raise HTTPException(status_code=502, detail="Task fetch returned an invalid payload")
+    return tasks
+
+
+async def _fetch_current_tasks_for_user(user_id: int, authorization: str) -> list[str]:
+    tasks = await _fetch_tasks_for_user(user_id, authorization)
     return [_format_task_context_line(task) for task in tasks if str(task.get("text", "")).strip()]
 
 
@@ -210,8 +229,100 @@ async def update_plan(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Model invocation failed: {exc}")
 
+    parsed_tasks = build_task_payloads(structured)
+    updated_tasks = []
+    created_tasks = []
+    unchanged_task_ids: list[int] = []
+
+    try:
+        existing_tasks = await _fetch_tasks_for_user(request.user_id, normalized_auth)
+        pending_tasks = [
+            task for task in existing_tasks if not bool(task.get("completed", False))
+        ]
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            # Update existing pending tasks by stable order, then append any overflow as new tasks.
+            for index, new_text in enumerate(parsed_tasks):
+                if index < len(pending_tasks):
+                    current_task = pending_tasks[index]
+                    task_id = current_task.get("id")
+                    if not isinstance(task_id, int) or task_id < 1:
+                        raise HTTPException(status_code=502, detail="Task update failed due to invalid task ID")
+
+                    old_text = str(current_task.get("text", "")).strip()
+                    if old_text == new_text:
+                        unchanged_task_ids.append(task_id)
+                        continue
+
+                    response = await client.patch(
+                        f"{TASKS_API_BASE_URL}/tasks/{task_id}",
+                        json={"text": new_text},
+                        headers={"Authorization": normalized_auth},
+                    )
+
+                    if response.status_code == 200:
+                        updated_tasks.append(response.json())
+                        continue
+
+                    if response.status_code == 404:
+                        raise HTTPException(status_code=404, detail="Task not found in onboarding API")
+
+                    if response.status_code == 400:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=_extract_upstream_error_detail(response, "Invalid task update payload"),
+                        )
+
+                    if response.status_code in {401, 403}:
+                        raise HTTPException(status_code=response.status_code, detail="Not allowed to update this task")
+
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"Task update failed with status {response.status_code}",
+                    )
+
+                response = await client.post(
+                    f"{TASKS_API_BASE_URL}/users/{request.user_id}/tasks",
+                    json={"text": new_text},
+                    headers={"Authorization": normalized_auth},
+                )
+
+                if response.status_code == 201:
+                    created_tasks.append(response.json())
+                    continue
+
+                if response.status_code == 404:
+                    raise HTTPException(status_code=404, detail="User not found in onboarding API")
+
+                if response.status_code == 400:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=_extract_upstream_error_detail(response, "Invalid user ID or task data"),
+                    )
+
+                if response.status_code in {401, 403}:
+                    raise HTTPException(status_code=response.status_code, detail="Not allowed to create tasks for this user")
+
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Task sync failed with status {response.status_code}",
+                )
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not reach onboarding API: {exc}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Task sync failed: {exc}")
+
     return {
         "response": narrative,
         "narrative_plan": narrative_plan.model_dump(),
         "task_list": structured.model_dump(),
+        "parsed_tasks": parsed_tasks,
+        "tasks_updated": updated_tasks,
+        "tasks_created": created_tasks,
+        "unchanged_task_ids": unchanged_task_ids,
+        "task_update_count": len(updated_tasks),
+        "task_create_count": len(created_tasks),
+        "task_count": len(parsed_tasks),
     }
