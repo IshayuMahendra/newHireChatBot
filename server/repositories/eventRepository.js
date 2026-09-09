@@ -8,6 +8,9 @@ export const eventRepository = {
         newEvent.timestamp = newEvent.timestamp ? new Date(newEvent.timestamp) : new Date();
         await eventCollection.insertOne(newEvent);
         return newEvent;
+    },
+    async getUserActivity(userId) {
+        return await eventCollection.find({ userId }).sort({ timestamp: -1 }).toArray();
     }
 };
 

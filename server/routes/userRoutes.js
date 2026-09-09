@@ -139,7 +139,8 @@ router.patch('/users/:id/plan30Day', authenticateToken, asyncHandler('PATCH /use
         });
         return res.status(200).json(updatedUser);
     }));
-     router.patch('/users/:id/week1Outcome', authenticateToken, asyncHandler('PATCH /users/:id/week1Outcome', async (req, res) => {
+    
+    router.patch('/users/:id/week1Outcome', authenticateToken, asyncHandler('PATCH /users/:id/week1Outcome', async (req, res) => {
     const userId = Number(req.params.id);
         if (!Number.isInteger(userId) || userId < 1) {
             return res.status(400).json({ error: 'Invalid user ID' });
@@ -181,6 +182,19 @@ router.patch('/users/:id/plan30Day', authenticateToken, asyncHandler('PATCH /use
             detail: `Week 2-4 Outcome updated: ${week2_4Outcome}`,
         });
         return res.status(200).json(updatedUser);
+    }));
+
+    router.get('/users/:id/activity', authenticateToken, asyncHandler('GET /users/:id/activity', async (req, res) => {
+        const userId = Number(req.params.id);
+        if (!Number.isInteger(userId) || userId < 1) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        const user = await userRepository.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const activity = await eventRepository.getUserActivity(userId);
+        return res.status(200).json(activity);
     }));
 
 export default router;
