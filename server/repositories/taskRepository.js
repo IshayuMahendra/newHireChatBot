@@ -54,6 +54,14 @@ export const taskRepository = {
         const owner = await userCollection.findOne({ _id: task.userId });
         return owner ? owner.id : null;
     },
+
+    async updateTaskText(taskId, newText) {
+        await taskCollection.updateOne(
+            { id: taskId },
+            { $set: { text: newText } }
+        );
+        return await taskCollection.findOne({ id: taskId });
+    }
 };
 
 export default taskRepository;
