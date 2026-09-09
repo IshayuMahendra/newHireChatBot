@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import './Plan.css'
-import type { OnboardingPlan } from './PlanRoute'
+import type { NarrativePlan, OnboardingPlan } from './PlanRoute'
 
 type PlanOverviewProps = {
   planResponse: string
+  narrativePlan: NarrativePlan | null
   onboardingPlan: OnboardingPlan
   canManagePlans: boolean
   onUpdatePlanWindow: (
@@ -23,6 +24,7 @@ const PLAN_WINDOWS: Array<{
 
 function PlanOverview({
   planResponse,
+  narrativePlan,
   onboardingPlan,
   canManagePlans,
   onUpdatePlanWindow,
@@ -55,6 +57,28 @@ function PlanOverview({
       <h2>Onboarding Plan</h2>
 
       <div className="plan-overview-scroll">
+        <article className="plan-window">
+          <div className="plan-window-heading">
+            <h3>Week 1</h3>
+          </div>
+          {narrativePlan?.week_1 ? (
+            <p className="plan-response">{narrativePlan.week_1}</p>
+          ) : (
+            <p className="plan-window-empty">No narrative has been saved for Week 1 yet.</p>
+          )}
+        </article>
+
+        <article className="plan-window">
+          <div className="plan-window-heading">
+            <h3>Weeks 2-4</h3>
+          </div>
+          {narrativePlan?.week_2_4 ? (
+            <p className="plan-response">{narrativePlan.week_2_4}</p>
+          ) : (
+            <p className="plan-window-empty">No narrative has been saved for Weeks 2-4 yet.</p>
+          )}
+        </article>
+
         {PLAN_WINDOWS.map(({ key, label }) => (
           <article key={key} className="plan-window">
             <div className="plan-window-heading">
@@ -95,7 +119,7 @@ function PlanOverview({
           </article>
         ))}
 
-        {planResponse ? (
+        {planResponse && !narrativePlan ? (
           <p className="plan-response">{planResponse}</p>
         ) : (
           <p className="plan-subtext">

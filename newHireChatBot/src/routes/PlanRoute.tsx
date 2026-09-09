@@ -29,6 +29,14 @@ export type OnboardingPlan = {
   plan90Day: string
 }
 
+export type NarrativePlan = {
+  week_1: string
+  week_2_4: string
+  day_30: string
+  day_60: string
+  day_90: string
+}
+
 type PlanRouteProps = {
   username: string
   userId?: number
@@ -122,6 +130,40 @@ function compareTaskPhase(
   return a.id - b.id
 }
 
+function buildTaskContext(
+  pendingTasks: PendingTask[],
+  completedTasks: CompletedTask[],
+): string[] {
+  const combined = [
+    ...pendingTasks.map((task) => ({
+      id: task.id,
+      phase: task.phase,
+      text: task.text,
+      status: 'pending',
+    })),
+    ...completedTasks.map((task) => ({
+      id: task.id,
+      phase: task.phase,
+      text: task.text,
+      status: 'completed',
+    })),
+  ].sort(compareTaskPhase)
+
+  return combined.map(
+    (task) => `id=${task.id}; status=${task.status}; phase=${task.phase}; text=${task.text}`,
+  )
+}
+
+function buildPlanTaskPayload(
+  pendingTasks: PendingTask[],
+  completedTasks: CompletedTask[],
+): string[] {
+  return [
+    ...pendingTasks.map((task) => `[${task.phase}] ${task.text}`),
+    ...completedTasks.map((task) => `[${task.phase}] ${task.text}`),
+  ]
+}
+
 function PlanRoute({
   username,
   userId,
@@ -155,6 +197,7 @@ function PlanRoute({
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
   const [planStatus, setPlanStatus] = useState('')
   const [planResponse, setPlanResponse] = useState('')
+  const [narrativePlan, setNarrativePlan] = useState<NarrativePlan | null>(null)
   const [onboardingPlan, setOnboardingPlan] = useState<OnboardingPlan>({
     plan30Day: '',
     plan60Day: '',
@@ -259,6 +302,9 @@ function PlanRoute({
       userId,
       trimmedRole,
       trimmedDepartment,
+      1,
+      buildPlanTaskPayload(pendingTasks, completedTasks),
+      onboardingPlan,
       token,
     )
 
@@ -269,6 +315,14 @@ function PlanRoute({
     }
 
     setPlanResponse(result.response ?? '')
+    setNarrativePlan(result.narrativePlan ?? null)
+    if (result.narrativePlan) {
+      setOnboardingPlan({
+        plan30Day: result.narrativePlan.day_30,
+        plan60Day: result.narrativePlan.day_60,
+        plan90Day: result.narrativePlan.day_90,
+      })
+    }
 
     await loadTasks(userId)
 
@@ -420,6 +474,8 @@ function PlanRoute({
       role,
       department,
       trimmedPrompt,
+      buildTaskContext(pendingTasks, completedTasks),
+      token,
     )
 
     setIsAsking(false)
@@ -458,6 +514,7 @@ function PlanRoute({
       <main className={`plan-layout ${canManageTasks ? 'manager-plan-layout' : ''}`}>
         <PlanOverview
           planResponse={planResponse}
+          narrativePlan={narrativePlan}
           onboardingPlan={onboardingPlan}
           canManagePlans={canManageTasks}
           onUpdatePlanWindow={updatePlanWindow}

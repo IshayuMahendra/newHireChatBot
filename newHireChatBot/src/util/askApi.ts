@@ -8,6 +8,7 @@ type AskPayload = {
   role: string
   department: string
   user_prompt: string
+  current_tasks: string[]
 }
 
 const ASK_API_URL = 'http://127.0.0.1:8000/ask'
@@ -16,11 +17,14 @@ export async function askAssistant(
   role: string,
   department: string,
   userPrompt: string,
+  currentTasks: string[],
+  token: string,
 ): Promise<AskResult> {
   const payload: AskPayload = {
     role: role.trim(),
     department: department.trim(),
     user_prompt: userPrompt.trim(),
+    current_tasks: currentTasks,
   }
 
   if (!payload.user_prompt) {
@@ -34,11 +38,19 @@ export async function askAssistant(
     }
   }
 
+  if (!token.trim()) {
+    return {
+      ok: false,
+      message: 'Your session is missing an authentication token.',
+    }
+  }
+
   try {
     const response = await fetch(ASK_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     })

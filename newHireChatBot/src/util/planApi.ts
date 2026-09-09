@@ -3,12 +3,26 @@ export type PlanResult = {
   message: string
   taskCount?: number
   response?: string
+  narrativePlan?: {
+    week_1: string
+    week_2_4: string
+    day_30: string
+    day_60: string
+    day_90: string
+  }
 }
 
 type PlanPayload = {
   user_id: number
   role: string
   department: string
+  onboarding_day: number
+  current_tasks: string[]
+  current_plan: {
+    plan30Day: string
+    plan60Day: string
+    plan90Day: string
+  }
 }
 
 const PLAN_API_URL = 'http://127.0.0.1:8000/plan'
@@ -17,12 +31,22 @@ export async function generatePlan(
   userId: number,
   role: string,
   department: string,
+  onboardingDay: number,
+  currentTasks: string[],
+  currentPlan: {
+    plan30Day: string
+    plan60Day: string
+    plan90Day: string
+  },
   token: string,
 ): Promise<PlanResult> {
   const payload: PlanPayload = {
     user_id: userId,
     role: role.trim(),
     department: department.trim(),
+    onboarding_day: onboardingDay,
+    current_tasks: currentTasks,
+    current_plan: currentPlan,
   }
 
   if (!payload.user_id || payload.user_id < 1) {
@@ -54,6 +78,13 @@ export async function generatePlan(
       detail?: string
       task_count?: number
       response?: string
+      narrative_plan?: {
+        week_1: string
+        week_2_4: string
+        day_30: string
+        day_60: string
+        day_90: string
+      }
     }
 
     if (!response.ok) {
@@ -68,6 +99,7 @@ export async function generatePlan(
       message: 'Plan generated and tasks saved.',
       taskCount: body.task_count,
       response: body.response,
+      narrativePlan: body.narrative_plan,
     }
   } catch {
     return {
