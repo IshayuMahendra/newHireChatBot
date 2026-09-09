@@ -40,8 +40,8 @@ router.patch('/flags/:id', authenticateToken, requireManager, asyncHandler('PATC
     if (resolved) {
         await eventRepository.addEvent({
             userId: flag.userId,
-            type: 'flag_resolved',
-            detail: `Manager marked flag "${flag.reason}" as resolved`,
+            type: 'flag_changed',
+            detail: `Flag marked as ${resolved ? 'resolved' : 'unresolved'}`,
         });
     }
     return res.status(200).json(updatedFlag);

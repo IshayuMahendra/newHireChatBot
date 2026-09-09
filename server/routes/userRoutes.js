@@ -49,6 +49,11 @@ router.post('/users/:id/tasks', authenticateToken, asyncHandler('POST /users/:id
     if (!taskAdded) {
         return res.status(404).json({ error: 'User not found' });
     }
+    await eventRepository.addEvent({
+        userId: taskAdded.userId,
+        type: 'task_created',
+        detail: `New task created: ${taskAdded.text}`,
+    });
     return res.status(201).json(taskAdded);
 }));
 

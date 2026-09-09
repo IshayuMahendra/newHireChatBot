@@ -26,6 +26,11 @@ router.patch('/tasks/:id/complete', authenticateToken, asyncHandler('PATCH /task
     if (!updatedTask) {
         return res.status(404).json({ error: 'Task not found' });
     }
+    await eventRepository.addEvent({
+        userId: ownerId,
+        type: 'task_completed',
+        detail: `Task marked as ${completed ? 'completed' : 'incomplete'}`,
+    });
     return res.status(200).json(updatedTask);
 }));
 
@@ -49,6 +54,11 @@ router.patch('/tasks/:id', authenticateToken, asyncHandler('PATCH /tasks/:id', a
     if (!updatedTask) {
         return res.status(404).json({ error: 'Task not found' });
     }
+    await eventRepository.addEvent({
+        userId: ownerId,
+        type: 'task_updated',
+        detail: `Task updated with new text: ${text.trim()}`,
+    });
     return res.status(200).json(updatedTask);
 }));
 
@@ -68,6 +78,11 @@ router.delete('/tasks/:id', authenticateToken, asyncHandler('DELETE /tasks/:id',
     if (!deleted) {
         return res.status(404).json({ error: 'Task not found' });
     }
+    await eventRepository.addEvent({
+        userId: ownerId,
+        type: 'task_deleted',
+        detail: `Task deleted successfully`,
+    });
     return res.status(200).json({ message: 'Task deleted successfully' });
 }));
 
