@@ -305,38 +305,83 @@ function PlanRoute({
     }
   }
 
-  function addTask(text: string) {
-    setPendingTasks((currentTasks) => [
-      ...currentTasks,
-      {
-        id: -Date.now(),
-        phase: 'Task',
-        text,
-        due: 'Pending',
-      },
-    ])
+  async function addTask(text: string) {
+    if (!targetUser.id) {
+      setTaskError('No user loaded. Please log in again.')
+      return false
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/users/${targetUser.id}/tasks`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text }),
+        },
+      )
+
+      if (!response.ok) {
+        setTaskError('Could not add the task to the server.')
+        return false
+      }
+
+      setTaskError('')
+      await loadTasks(targetUser.id)
+      return true
+    } catch {
+      setTaskError('Could not add the task to the server.')
+      return false
+    }
   }
 
-  function editTask(taskId: number, text: string) {
-    setPendingTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, text } : task,
-      ),
-    )
-    setCompletedTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, text } : task,
-      ),
-    )
+  async function editTask(taskId: number, text: string) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      })
+
+      if (!response.ok) {
+        setTaskError('Could not update the task in the server.')
+        return false
+      }
+
+      setTaskError('')
+      await loadTasks(targetUser.id!)
+      return true
+    } catch {
+      setTaskError('Could not update the task in the server.')
+      return false
+    }
   }
 
-  function deleteTask(taskId: number) {
-    setPendingTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== taskId),
-    )
-    setCompletedTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== taskId),
-    )
+  async function deleteTask(taskId: number) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        setTaskError('Could not delete the task from the server.')
+        return
+      }
+
+      setTaskError('')
+      await loadTasks(targetUser.id!)
+    } catch {
+      setTaskError('Could not delete the task from the server.')
+    }
   }
 
   function updatePlanWindow(

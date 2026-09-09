@@ -11,9 +11,9 @@ type PlanTaskListProps = {
   planStatus: string
   onToggleTask: (taskId: number, completed: boolean) => Promise<void> | void
   canManageTasks: boolean
-  onAddTask: (text: string) => void
-  onEditTask: (taskId: number, text: string) => void
-  onDeleteTask: (taskId: number) => void
+  onAddTask: (text: string) => Promise<boolean>
+  onEditTask: (taskId: number, text: string) => Promise<boolean>
+  onDeleteTask: (taskId: number) => Promise<void>
 }
 
 function PlanTaskList({
@@ -33,7 +33,7 @@ function PlanTaskList({
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editingTaskText, setEditingTaskText] = useState('')
 
-  function submitNewTask(event: FormEvent<HTMLFormElement>) {
+  async function submitNewTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = draftTaskText.trim()
 
@@ -41,12 +41,15 @@ function PlanTaskList({
       return
     }
 
-    onAddTask(text)
-    setDraftTaskText('')
-    setIsAddingTask(false)
+    const added = await onAddTask(text)
+
+    if (added) {
+      setDraftTaskText('')
+      setIsAddingTask(false)
+    }
   }
 
-  function submitTaskEdit(event: FormEvent<HTMLFormElement>) {
+  async function submitTaskEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = editingTaskText.trim()
 
@@ -54,9 +57,12 @@ function PlanTaskList({
       return
     }
 
-    onEditTask(editingTaskId, text)
-    setEditingTaskId(null)
-    setEditingTaskText('')
+    const updated = await onEditTask(editingTaskId, text)
+
+    if (updated) {
+      setEditingTaskId(null)
+      setEditingTaskText('')
+    }
   }
 
   function beginTaskEdit(taskId: number, text: string) {
@@ -86,7 +92,7 @@ function PlanTaskList({
           </button>
 
           {isAddingTask ? (
-            <form className="task-editor" onSubmit={submitNewTask}>
+            <form className="task-editor" onSubmit={(event) => void submitNewTask(event)}>
               <input
                 value={draftTaskText}
                 onChange={(event) => setDraftTaskText(event.target.value)}
@@ -249,7 +255,7 @@ type TaskManagerActionsProps = {
   editingTaskText: string
   onEditingTaskTextChange: (text: string) => void
   onStartEdit: (taskId: number, text: string) => void
-  onSaveEdit: (event: FormEvent<HTMLFormElement>) => void
+  onSaveEdit: (event: FormEvent<HTMLFormElement>) => Promise<void>
   onCancelEdit: () => void
   onDelete: (taskId: number) => void
 }
@@ -266,7 +272,7 @@ function TaskManagerActions({
 }: TaskManagerActionsProps) {
   if (editingTaskId === task.id) {
     return (
-      <form className="task-editor" onSubmit={onSaveEdit}>
+      <form className="task-editor" onSubmit={(event) => void onSaveEdit(event)}>
         <input
           value={editingTaskText}
           onChange={(event) => onEditingTaskTextChange(event.target.value)}
