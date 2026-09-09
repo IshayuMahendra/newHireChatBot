@@ -52,4 +52,23 @@ router.patch('/tasks/:id', authenticateToken, asyncHandler('PATCH /tasks/:id', a
     return res.status(200).json(updatedTask);
 }));
 
+router.delete('/tasks/:id', authenticateToken, asyncHandler('DELETE /tasks/:id', async (req, res) => {
+    const taskId = Number(req.params.id);
+    if (!Number.isInteger(taskId) || taskId < 1) {
+        return res.status(400).json({ error: 'Invalid task ID' });
+    }
+    const ownerId = await taskRepository.getTaskOwnerId(taskId);
+    if (ownerId === null) {
+        return res.status(404).json({ error: 'Task not found' });
+    }
+    if (!isOwnerOrManager(req.user, ownerId)) {
+        return res.status(403).json({ error: 'Managers do not have tasks and new hires cannot delete other users\' tasks' });
+    }
+    const deleted = await taskRepository.deleteTask(taskId);
+    if (!deleted) {
+        return res.status(404).json({ error: 'Task not found' });
+    }
+    return res.status(200).json({ message: 'Task deleted successfully' });
+}));
+
 export default router;

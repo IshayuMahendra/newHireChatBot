@@ -61,6 +61,11 @@ export const taskRepository = {
             { $set: { text: newText } }
         );
         return await taskCollection.findOne({ id: taskId });
+    },
+
+    async deleteTask(taskId) {
+        const result = await taskCollection.deleteOne({ id: taskId });
+        return result.deletedCount > 0;
     }
 };
 
