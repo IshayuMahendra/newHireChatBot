@@ -51,6 +51,9 @@ export const taskRepository = {
         if (!task) {
             return null;
         }
+        if (Number.isInteger(task.userId)) {
+            return task.userId;
+        }
         const owner = await userCollection.findOne({ _id: task.userId });
         return owner ? owner.id : null;
     },
