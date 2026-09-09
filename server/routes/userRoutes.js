@@ -109,7 +109,7 @@ router.patch('/users/:id/plan30Day', authenticateToken, asyncHandler('PATCH /use
         }
         const { plan90Day } = req.body;
         if (typeof plan90Day !== 'string') {
-            return res.status(400).json({ error: 'Body must contain string' });
+            return res.status(400).json({ error: 'Body must contain string for plan90Day' });
         }
         const user = await userRepository.getUserById(userId);
         if (!user) {
@@ -120,6 +120,49 @@ router.patch('/users/:id/plan30Day', authenticateToken, asyncHandler('PATCH /use
             userId: user.id,
             type: 'plan90Day_updated',
             detail: `90-day plan updated: ${plan90Day}`,
+        });
+        return res.status(200).json(updatedUser);
+    }));
+     router.patch('/users/:id/week1Outcome', authenticateToken, asyncHandler('PATCH /users/:id/week1Outcome', async (req, res) => {
+    const userId = Number(req.params.id);
+        if (!Number.isInteger(userId) || userId < 1) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        const { week1Outcome } = req.body;
+        if (typeof week1Outcome !== 'string') {
+            return res.status(400).json({ error: 'Body must contain string for week1Outcome' });
+        }
+        const user = await userRepository.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const updatedUser = await userRepository.updateUserWeek1Outcome(userId, week1Outcome);
+        await eventRepository.addEvent({
+            userId: user.id,
+            type: 'week1Outcome_updated',
+            detail: `Week 1 Outcome updated: ${week1Outcome}`,
+        });
+        return res.status(200).json(updatedUser);
+    }));
+
+    router.patch('/users/:id/week2_4Outcome', authenticateToken, asyncHandler('PATCH /users/:id/week2_4Outcome', async (req, res) => {
+    const userId = Number(req.params.id);
+        if (!Number.isInteger(userId) || userId < 1) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        const { week2_4Outcome } = req.body;
+        if (typeof week2_4Outcome !== 'string') {
+            return res.status(400).json({ error: 'Body must contain string for week2_4Outcome' });
+        }
+        const user = await userRepository.getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const updatedUser = await userRepository.updateUserWeek2_4Outcome(userId, week2_4Outcome);
+        await eventRepository.addEvent({
+            userId: user.id,
+            type: 'week2_4Outcome_updated',
+            detail: `Week 2-4 Outcome updated: ${week2_4Outcome}`,
         });
         return res.status(200).json(updatedUser);
     }));

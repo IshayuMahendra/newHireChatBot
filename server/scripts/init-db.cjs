@@ -1,14 +1,16 @@
 const { MongoClient, ObjectId } = require('mongodb');
+const bcrypt = require('bcrypt');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = 'chatbotdb';
 const COLLECTIONS = ['users', 'tasks', 'flags', 'progressEvents'];
+const SALT_ROUNDS = 10;
 
 const SEED_USERS = [
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d99a'),
 		id: 1,
-		username: 'csmiley',
+		username: 'clairemanager',
 		password: 'abc123',
 		passwordHash: '$2b$10$K7dQfZ1aVxUuR3nLpS9oYeJ4mHtCwB6xNvA2rGkD8sTiQyE5uZbWm',
 		userType: 'manager',
@@ -20,6 +22,8 @@ const SEED_USERS = [
 			'By day 60 you should be picking up standard sprint tickets without hand-holding. Take ownership of a small feature from design discussion through deployment, including writing tests and updating documentation. Start participating in code review as a reviewer, not just an author, since reading other people\'s changes is the fastest way to learn the wider system. Shadow one on-call rotation to see how incidents are triaged, and meet with two engineers outside your immediate team to understand how your service fits the larger product.',
 		plan90Day:
 			'In your third month you move from executing work to shaping it. Own a meaningful slice of a roadmap feature, break it into tasks yourself, and communicate progress and risks proactively in sprint planning. Take a primary on-call shift with a backup engineer available. Identify one piece of technical debt or tooling friction you hit during onboarding, write up a short proposal, and drive the fix. By the end of the quarter you and your manager should be able to name the area of the codebase you are becoming the go-to person for.',
+		week1Outcome: 'Completed access setup and introduced themselves to the engineering team.',
+		week2_4Outcome: 'Completed onboarding, shipped small changes, and established a regular feedback rhythm.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d99b'),
@@ -33,6 +37,8 @@ const SEED_USERS = [
 		plan30Day: '',
 		plan60Day: '',
 		plan90Day: '',
+		week1Outcome: 'Completed HR systems setup and reviewed the current onboarding process.',
+		week2_4Outcome: 'Supported employee onboarding requests and documented common benefits questions.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d99c'),
@@ -49,6 +55,8 @@ const SEED_USERS = [
 			'Month two is about producing analysis other people rely on. Take over one recurring report end to end, including its refresh schedule and stakeholder communication. Build a dashboard from a real request rather than a practice exercise, and sit with the requester afterward to see whether it actually answered their question. Deepen your SQL and visualization tooling skills on the specific stack this team uses, and start flagging data quality issues you notice instead of quietly working around them.',
 		plan90Day:
 			'By day 90 you should be trusted to scope an ambiguous question into an answerable analysis. Partner directly with one business stakeholder, translate their vague ask into defined metrics, deliver the analysis, and present the findings yourself. Contribute an improvement to a shared pipeline or data model. Aim to be the person on the team who knows one subject area, such as onboarding funnel or retention, well enough that others route questions about it to you.',
+		week1Outcome: 'Received warehouse access and reproduced an existing report with guidance.',
+		week2_4Outcome: 'Independently refreshed recurring reports and documented key metric definitions.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d99d'),
@@ -65,6 +73,8 @@ const SEED_USERS = [
 			'In month two, own a defined piece of the close. Prepare assigned reconciliations and journal entries with a reviewer checking your work, and get comfortable explaining variances rather than just reporting them. Build working relationships with the business partners whose cost centers you support, since accurate numbers depend on them telling you about changes early. Start learning the reporting tools well enough to answer routine questions without escalating.',
 		plan90Day:
 			'By the end of the quarter you should close your area with light review rather than close supervision. Deliver variance commentary that a business partner can act on, and support at least one forecast or budget cycle. Identify one manual reconciliation or recurring rework loop you encountered and propose a documented improvement. Accuracy and on-time delivery come first here; process improvement is the bonus once the fundamentals are reliable.',
+		week1Outcome: 'Completed finance controls training and gained access to the general ledger.',
+		week2_4Outcome: 'Prepared assigned reconciliations with reviewer feedback and met close deadlines.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d99e'),
@@ -81,6 +91,8 @@ const SEED_USERS = [
 			'Month two, own a full feature flow from problem framing through developer handoff. Run your work through design critique and iterate on the feedback visibly. Partner directly with the engineers implementing your designs so you learn the platform constraints firsthand, and validate at least one design decision with real user input rather than internal opinion. Begin contributing back to the design system instead of only consuming it.',
 		plan90Day:
 			'By day 90 you should be a design voice in product planning, not just a downstream executor. Lead the design side of a roadmap initiative, including facilitating a workshop or research session with cross-functional partners. Advocate for accessibility and consistency in reviews of other designers\' work. Establish yourself as the design owner of a specific product surface that PMs and engineers come to directly.',
+		week1Outcome: 'Reviewed the design system and observed a customer research session.',
+		week2_4Outcome: 'Delivered a reviewed component update and supported an in-flight product flow.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d99f'),
@@ -97,6 +109,8 @@ const SEED_USERS = [
 			'In month two, take independent ownership of tier-one and routine tier-two tickets with your resolution times tracked against team targets. Learn the imaging and endpoint management tooling well enough to prepare machines without supervision. Participate in a scheduled maintenance window to see how planned changes differ from break-fix work, and start recognizing repeat issues that signal an underlying problem rather than isolated user error.',
 		plan90Day:
 			'By day 90 you should be handling escalations rather than only receiving them, and covering a support shift on your own. Own one recurring problem end to end: identify the root cause, implement or propose a permanent fix, and write the knowledge base article. Take responsibility for a small piece of infrastructure or a tooling improvement that reduces ticket volume for the whole team.',
+		week1Outcome: 'Completed security training and resolved standard support tickets with a mentor.',
+		week2_4Outcome: 'Handled tier-one tickets independently and contributed a knowledge base article.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d9a0'),
@@ -113,6 +127,8 @@ const SEED_USERS = [
 			'Month two, own the coordination of a small campaign or channel: build the timeline, chase the dependencies, and keep stakeholders informed. Publish external content that has gone through the normal review process, and learn to read the analytics dashboards well enough to report on what your work actually did. Build working relationships with the design and sales counterparts you depend on, since most delays in this role are handoff delays.',
 		plan90Day:
 			'By the end of the quarter you should be proposing campaigns, not just executing them. Bring a data-supported recommendation to a planning meeting and own the resulting project through launch and post-mortem. Take primary responsibility for one channel or content stream and report on its performance regularly. Aim to be the person who knows the campaign calendar cold and can tell others what is shipping when.',
+		week1Outcome: 'Reviewed brand guidance and gained access to campaign and analytics tools.',
+		week2_4Outcome: 'Coordinated campaign tasks and reported initial performance results.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d9a1'),
@@ -129,6 +145,8 @@ const SEED_USERS = [
 			'In month two, take independent responsibility for contract intake, routing, and tracking on standard agreements, with attorney review at the points that require it. Prepare first drafts of routine documents from approved templates and manage signature workflows end to end. Learn the deadline-tracking process thoroughly, since missed dates are the highest-consequence failure mode in this role.',
 		plan90Day:
 			'By day 90 you should be running the operational side of a matter type with minimal supervision, keeping files, deadlines, and status reporting accurate without prompting. Support a larger project such as a compliance review or a policy update. Identify one workflow that depends on individual memory rather than a documented process and propose a fix. Reliability and discretion are what earn expanded responsibility here.',
+		week1Outcome: 'Completed confidentiality training and learned matter-management filing conventions.',
+		week2_4Outcome: 'Processed routine contract intake and maintained accurate deadline tracking.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d9a2'),
@@ -145,12 +163,14 @@ const SEED_USERS = [
 			'Month two you carry a real activity target. Run your own outbound cadences, book qualified meetings, and hand them off cleanly to account executives with notes they can actually use. Get comfortable with discovery questions rather than pitching immediately. Review your own call recordings weekly with your manager and work on one specific skill at a time instead of trying to fix everything at once.',
 		plan90Day:
 			'By day 90 you should be consistently hitting quota with a self-managed pipeline. Own your territory or segment research, maintain accurate forecasting hygiene in the CRM, and start contributing what is working back to the team, whether that is a message that lands or an objection pattern worth naming. Sustained, predictable activity matters more here than any single big week.',
+		week1Outcome: 'Completed product training and practiced the core pitch with a senior rep.',
+		week2_4Outcome: 'Started supervised outreach and logged prospect activity consistently in the CRM.',
 	},
 	{
 		_id: new ObjectId('6a7de7826893b4d54357d9a3'),
 		id: 10,
-		username: 'ojohnson',
-		password: 'I0b&v29',
+		username: 'clairenew',
+		password: 'abc123',
 		passwordHash: '$2b$10$V9cKwR4mYqTwB7nZjP3oHeS5uD8aF6iL2tXcRbVnEyQ1sWmGzJdCu',
 		userType: 'new_hire',
 		role: 'Customer Success Associate',
@@ -161,6 +181,8 @@ const SEED_USERS = [
 			'Month two, take ownership of a small book of accounts. Run your own check-in calls, track health indicators, and document account context so anyone covering for you can pick it up. Learn to spot early churn signals such as declining usage or a departed champion, and escalate them before they become renewals at risk. Build a working relationship with the support and product teams you will need when a customer hits a real problem.',
 		plan90Day:
 			'By day 90 you should be managing your accounts independently, including leading a renewal or expansion conversation with light coaching. Turn recurring customer feedback into a structured summary for the product team rather than one-off anecdotes. Own the outcomes for your segment: retention, adoption, and the customer relationship itself, and be the person your accounts contact first.',
+		week1Outcome: 'Completed product training and shadowed customer onboarding calls.',
+		week2_4Outcome: 'Handled low-complexity customer questions and documented account context.',
 	},
 	{
 		_id: new ObjectId('6a7e17949762e1fae9e161f0'),
@@ -173,6 +195,8 @@ const SEED_USERS = [
 		plan30Day: '',
 		plan60Day: '',
 		plan90Day: '',
+		week1Outcome: 'Reviewed team priorities and completed manager access setup.',
+		week2_4Outcome: 'Established regular check-ins and reviewed new-hire progress.',
 		id: 11,
 	},
 ];
@@ -460,6 +484,13 @@ const SEED_PROGRESS_EVENTS = [
 	},
 ];
 
+async function createSeedUsers() {
+	return await Promise.all(SEED_USERS.map(async ({ passwordHash, password, ...user }) => ({
+		...user,
+		password: await bcrypt.hash(password, SALT_ROUNDS),
+	})));
+}
+
 async function initDatabase() {
 	const client = new MongoClient(MONGODB_URI);
 
@@ -488,8 +519,9 @@ async function initDatabase() {
 		await flagsCollection.deleteMany({});
 		await progressEventsCollection.deleteMany({});
 
-		await usersCollection.insertMany(SEED_USERS);
-		console.log(`Replaced users collection with ${SEED_USERS.length} documents`);
+		const seedUsers = await createSeedUsers();
+		await usersCollection.insertMany(seedUsers);
+		console.log(`Replaced users collection with ${seedUsers.length} documents`);
 
 		await tasksCollection.insertMany(SEED_TASKS);
 		console.log(`Replaced tasks collection with ${SEED_TASKS.length} documents`);

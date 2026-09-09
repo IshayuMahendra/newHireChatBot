@@ -13,6 +13,8 @@ export const userRepository = {
         newUser.plan30Day = '';
         newUser.plan60Day = '';
         newUser.plan90Day = '';
+        newUser.week1Outcome = '';
+        newUser.week2_4Outcome = '';
         newUser.password = await bcrypt.hash(newUser.password, SALT_ROUNDS);
         await userCollection.insertOne(newUser);
         const token = signAuthToken(newUser);
@@ -59,6 +61,26 @@ export const userRepository = {
         const result = await userCollection.updateOne(
             { id: userId },
             { $set: { plan90Day } }
+        );
+        if (result.matchedCount === 0) {
+            return null;
+        }
+        return await userCollection.findOne({ id: userId });
+    },
+    async updateUserWeek1Outcome(userId, week1Outcome) {
+        const result = await userCollection.updateOne(
+            { id: userId },
+            { $set: { week1Outcome } }
+        );
+        if (result.matchedCount === 0) {
+            return null;
+        }
+        return await userCollection.findOne({ id: userId });
+    },
+    async updateUserWeek2_4Outcome(userId, week2_4Outcome) {
+        const result = await userCollection.updateOne(
+            { id: userId },
+            { $set: { week2_4Outcome } }
         );
         if (result.matchedCount === 0) {
             return null;
