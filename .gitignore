@@ -4,6 +4,7 @@ node_modules/
 
 # Local database files
 data/db/
+playground.mongodb.js
 .env
 
 # Inference server local env files

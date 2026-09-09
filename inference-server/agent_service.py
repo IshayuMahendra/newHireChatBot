@@ -1,8 +1,11 @@
-from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from dotenv import load_dotenv
-from models import AskModel, PlanModel, PlanStructuredOutput
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, START, StateGraph
+
+from models import AskModel, GraphState, PlanModel, PlanNarrativeOutput, PlanStructuredOutput
+from rag import retrieve_policy_context_skeleton
 
 MODEL_NAME = "gpt-5.6-luna"
 
@@ -16,6 +19,11 @@ You are a welcoming onboarding assistant helping a new hire feel supported and c
 ## Context
 - Role: {role}
 - Department: {department}
+- Onboarding day: {onboarding_day}
+- Current tasks: {current_tasks}
+- Current plan: {current_plan}
+- Retrieval status: {rag_status}
+- Retrieved sources: {rag_sources}
 - User question: {user_prompt}
 
 ## Response guidelines
@@ -28,36 +36,33 @@ You are a welcoming onboarding assistant helping a new hire feel supported and c
 """
 )
 
-PLAN_PROMPT_TEMPLATE = PromptTemplate.from_template(
-    """# New Hire Onboarding Planner
+PLAN_NARRATIVE_PROMPT_TEMPLATE = PromptTemplate.from_template(
+        """# Narrative New Hire Onboarding Planner
 
-You are a welcoming onboarding assistant with a helpful demeanor.
+You are a welcoming onboarding assistant creating a personalized onboarding story.
 
 ## Context
 - Role: {role}
 - Department: {department}
+- Onboarding day: {onboarding_day}
+- Current tasks: {current_tasks}
+- Current plan: {current_plan}
+- Retrieval status: {rag_status}
 
 ## Task
-Create a simplified onboarding plan that feels continuous and easy to follow.
+Return five concise narrative paragraphs for the onboarding plan.
 
-## Output format
-Use this exact structure:
-1) First Week (3-5 tasks)
-2) Weeks 2-4 (4-6 tasks)
-3) Day 30 Milestone (2-3 outcomes)
-4) Day 60 Milestone (2-3 outcomes)
-5) Day 90 Milestone (2-3 outcomes)
-
-Guidelines:
-- Present the plan like a light onboarding story, where each phase feels like the next chapter.
-- In each phase, add 1 short narrative sentence before the bullets to explain how that phase helps the new hire succeed.
-- Show how a welcoming support system (manager, buddy, team) makes onboarding easier and less stressful.
-- Keep each bullet short and actionable.
-- Make tasks build naturally from one phase to the next.
-- Avoid duplicate tasks across phases.
-- Keep wording human, supportive, and easy to understand.
-- Use brief, friendly phrasing that sounds like a real onboarding partner.
-- Keep the exact output structure above unchanged.
+## Requirements
+- Match the provided structured schema exactly.
+- Write one paragraph for each section:
+    - week_1
+    - week_2_4
+    - day_30
+    - day_60
+    - day_90
+- Make each section feel like the next step in the same onboarding journey.
+- Make the guidance meaningfully different based on role and department.
+- Use a supportive, practical, human tone.
 """
 )
 
@@ -69,6 +74,10 @@ You are an assistant providing onboarding tasks for new hires.
 ## Context
 - Role: {role}
 - Department: {department}
+- Onboarding day: {onboarding_day}
+- Current tasks: {current_tasks}
+- Current plan: {current_plan}
+- Retrieval status: {rag_status}
 
 ## Task
 Return a simplified and continuous onboarding plan with short, actionable items.
@@ -77,36 +86,187 @@ Return a simplified and continuous onboarding plan with short, actionable items.
 Return output that matches the provided structured schema.
 
 ## Quality requirements
-- Make the flow progressive from First Week -> Weeks 2-4 -> Day 30 -> Day 60 -> Day 90.
+- Make the flow progressive from Week 1 -> Week 2-4 -> Day 30 -> Day 60 -> Day 90.
 - Do not repeat the same task in different phases.
 - Keep each item concise and practical.
 - Keep language clear, supportive, and human while staying short.
 """
 )
 
+def _format_current_tasks(tasks: list[str]) -> str:
+    if not tasks:
+        return "None"
+    return "; ".join(tasks)
 
-def invoke_AskModel(ctx: AskModel) -> str:
+
+PLAN_KEY_ALIASES = {
+    "week_1": "planWeek1",
+    "week_2_4": "planWeek2_4",
+    "day_30": "plan30Day",
+    "day_60": "plan60Day",
+    "day_90": "plan90Day",
+    "planWeek1": "planWeek1",
+    "planWeek2_4": "planWeek2_4",
+    "plan30Day": "plan30Day",
+    "plan60Day": "plan60Day",
+    "plan90Day": "plan90Day",
+}
+
+
+def _normalize_plan_dict(plan: dict[str, str]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in plan.items():
+        cleaned_key = PLAN_KEY_ALIASES.get(str(key).strip(), str(key).strip())
+        cleaned_value = str(value).strip()
+        if cleaned_key and cleaned_value:
+            normalized[cleaned_key] = cleaned_value
+    return normalized
+
+
+def _format_current_plan(plan: dict[str, str]) -> str:
+    if not plan:
+        return "None"
+    normalized_plan = _normalize_plan_dict(plan)
+    ordered_keys = ["planWeek1", "planWeek2_4", "plan30Day", "plan60Day", "plan90Day"]
+    display_labels = {
+        "planWeek1": "Week 1",
+        "planWeek2_4": "Week 2-4",
+        "plan30Day": "Day 30",
+        "plan60Day": "Day 60",
+        "plan90Day": "Day 90",
+    }
+    sections: list[str] = []
+    for key in ordered_keys:
+        value = normalized_plan.get(key)
+        if value:
+            sections.append(f"{display_labels[key]}: {value}")
+    if not sections:
+        for key, value in normalized_plan.items():
+            if value:
+                sections.append(f"{display_labels.get(key, key)}: {value}")
+    return " | ".join(sections) if sections else "None"
+
+
+def _build_prompt_payload(state: GraphState) -> dict[str, str | int]:
+    return {
+        "role": state["role"],
+        "department": state["department"],
+        "onboarding_day": int(state.get("onboarding_day", 1)),
+        "current_tasks": _format_current_tasks(state.get("current_tasks", [])),
+        "current_plan": _format_current_plan(state.get("current_plan", {})),
+        "rag_status": str(state.get("rag_status", "skeleton")),
+        "rag_sources": ", ".join(state.get("rag_sources", [])) or "None",
+        "user_prompt": str(state.get("user_prompt", "")),
+    }
+
+
+def _format_narrative_plan_output(plan: PlanNarrativeOutput) -> str:
+    return "\n\n".join(
+        [
+            f"Week 1: {plan.week_1}",
+            f"Week 2-4: {plan.week_2_4}",
+            f"Day 30: {plan.day_30}",
+            f"Day 60: {plan.day_60}",
+            f"Day 90: {plan.day_90}",
+        ]
+    )
+
+
+def _gather_context_node(state: GraphState) -> GraphState:
+    return {
+        "onboarding_day": max(int(state.get("onboarding_day", 1)), 1),
+        "current_tasks": state.get("current_tasks", []),
+        "current_plan": state.get("current_plan", {}),
+    }
+
+
+def _rag_skeleton_node(state: GraphState) -> GraphState:
+    rag_result = retrieve_policy_context_skeleton(state)
+    return {
+        "rag_status": str(rag_result.get("rag_status", "skeleton")),
+        "rag_confidence": float(rag_result.get("rag_confidence", 0.0)),
+        "rag_sources": list(rag_result.get("rag_sources", [])),
+        "rag_chunks": list(rag_result.get("rag_chunks", [])),
+    }
+
+
+def _route_workflow(state: GraphState) -> str:
+    return "generate_plan" if state.get("workflow") == "plan" else "generate_ask"
+
+
+def _generate_ask_node(state: GraphState) -> GraphState:
     model = ChatOpenAI(model=MODEL_NAME)
     chain = ASK_PROMPT_TEMPLATE | model | StrOutputParser()
-    return chain.invoke(
+    response = chain.invoke(_build_prompt_payload(state))
+    return {"response": response}
+
+
+def _generate_plan_node(state: GraphState) -> GraphState:
+    model = ChatOpenAI(model=MODEL_NAME)
+    prompt_payload = _build_prompt_payload(state)
+    narrative_sections_chain = PLAN_NARRATIVE_PROMPT_TEMPLATE | model.with_structured_output(PlanNarrativeOutput)
+    structured_chain = PLAN_STRUCTURED_PROMPT_TEMPLATE | model.with_structured_output(PlanStructuredOutput)
+
+    narrative_plan = narrative_sections_chain.invoke(prompt_payload)
+    structured_plan = structured_chain.invoke(prompt_payload)
+
+    return {
+        "response": _format_narrative_plan_output(narrative_plan),
+        "narrative_plan": narrative_plan,
+        "structured_plan": structured_plan,
+    }
+
+
+def _build_graph():
+    builder = StateGraph(GraphState)
+    builder.add_node("gather_context", _gather_context_node)
+    builder.add_node("rag_retrieve_skeleton", _rag_skeleton_node)
+    builder.add_node("generate_ask", _generate_ask_node)
+    builder.add_node("generate_plan", _generate_plan_node)
+
+    builder.add_edge(START, "gather_context")
+    builder.add_edge("gather_context", "rag_retrieve_skeleton")
+    builder.add_conditional_edges(
+        "rag_retrieve_skeleton",
+        _route_workflow,
         {
+            "generate_ask": "generate_ask",
+            "generate_plan": "generate_plan",
+        },
+    )
+    builder.add_edge("generate_ask", END)
+    builder.add_edge("generate_plan", END)
+    return builder.compile()
+
+
+WORKFLOW_GRAPH = _build_graph()
+
+
+def invoke_PlanWorkflow(ctx: PlanModel) -> GraphState:
+    return WORKFLOW_GRAPH.invoke(
+        {
+            "workflow": "plan",
             "role": ctx.role,
             "department": ctx.department,
-            "user_prompt": ctx.user_prompt,
+            "onboarding_day": ctx.onboarding_day,
+            "current_tasks": ctx.current_tasks,
+            "current_plan": ctx.current_plan,
         }
     )
 
-def invoke_PlanModel(ctx: PlanModel) -> str:
-    model = ChatOpenAI(model=MODEL_NAME)
-    chain = PLAN_PROMPT_TEMPLATE | model | StrOutputParser()
-    return chain.invoke({"role": ctx.role, "department": ctx.department})
 
-
-def invoke_PlanModel_structured(ctx: PlanModel) -> PlanStructuredOutput:
-    model = ChatOpenAI(model=MODEL_NAME)
-    structured_llm = model.with_structured_output(PlanStructuredOutput)
-    chain = PLAN_STRUCTURED_PROMPT_TEMPLATE | structured_llm
-    return chain.invoke({"role": ctx.role, "department": ctx.department})
+def invoke_AskWorkflow(ctx: AskModel) -> GraphState:
+    return WORKFLOW_GRAPH.invoke(
+        {
+            "workflow": "ask",
+            "role": ctx.role,
+            "department": ctx.department,
+            "user_prompt": ctx.user_prompt,
+            "onboarding_day": ctx.onboarding_day,
+            "current_tasks": ctx.current_tasks,
+            "current_plan": ctx.current_plan,
+        }
+    )
 
 
 

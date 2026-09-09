@@ -8,6 +8,7 @@ dependencies = [
 	"fastapi",
 	"httpx",
 	"langchain-core",
+	"langgraph",
 	"langchain-openai",
 	"uvicorn[standard]",
 ]
