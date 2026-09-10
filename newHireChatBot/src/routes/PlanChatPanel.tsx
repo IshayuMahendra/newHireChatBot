@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react'
 import type { FormEvent } from 'react'
 import './Plan.css'
 
@@ -28,6 +29,16 @@ function PlanChatPanel({
   onChatInputChange,
   onAsk,
 }: PlanChatPanelProps) {
+  const chatWindowRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const chatWindow = chatWindowRef.current
+
+    if (chatWindow) {
+      chatWindow.scrollTop = chatWindow.scrollHeight
+    }
+  }, [chatMessages.length])
+
   return (
     <section
       className="plan-chat"
@@ -36,6 +47,7 @@ function PlanChatPanel({
       <h2>Assistant Chat</h2>
 
       <div
+        ref={chatWindowRef}
         className="chat-window"
         role="log"
         aria-live="polite"
