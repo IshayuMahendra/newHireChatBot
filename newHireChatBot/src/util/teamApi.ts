@@ -70,8 +70,8 @@ export async function getTeamUsers(token: string): Promise<TeamUsersResult> {
         .filter((user) => user.userType === 'new_hire')
         .map((user) => ({
           ...user,
-          hasOpenFlag: userIdsWithOpenFlags.has(String(user._id)),
-          flags: flags.filter((flag) => String(flag.userId) === String(user._id)),
+          hasOpenFlag: userIdsWithOpenFlags.has(String(user.id)),
+          flags: flags.filter((flag) => String(flag.userId) === String(user.id)),
         })),
     }
   } catch {
