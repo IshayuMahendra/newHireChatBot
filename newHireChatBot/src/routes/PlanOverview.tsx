@@ -24,6 +24,70 @@ const PLAN_WINDOWS: Array<{
   { key: 'plan90Day', label: 'Days 61-90' },
 ]
 
+function renderPlanText(text: string) {
+  return text.split(/(\*\*[^*]+?\*\*)/g).map((segment, index) => {
+    const isBold = segment.startsWith('**') && segment.endsWith('**')
+
+    return isBold ? (
+      <strong key={`bold-${index}`}>{segment.slice(2, -2)}</strong>
+    ) : segment
+  })
+}
+
+type PlanContentBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'list'; items: string[] }
+
+function renderPlanContent(text: string) {
+  const blocks: PlanContentBlock[] = []
+  let paragraphLines: string[] = []
+  let listItems: string[] = []
+
+  function addParagraph() {
+    if (paragraphLines.length) {
+      blocks.push({ type: 'paragraph', text: paragraphLines.join('\n') })
+      paragraphLines = []
+    }
+  }
+
+  function addList() {
+    if (listItems.length) {
+      blocks.push({ type: 'list', items: listItems })
+      listItems = []
+    }
+  }
+
+  for (const line of text.split('\n')) {
+    const bullet = line.match(/^\s*[-*]\s+(.+)$/)
+
+    if (bullet) {
+      addParagraph()
+      listItems.push(bullet[1])
+    } else if (line.trim()) {
+      addList()
+      paragraphLines.push(line)
+    } else {
+      addParagraph()
+      addList()
+    }
+  }
+
+  addParagraph()
+  addList()
+
+  return blocks.map((block, index) => (
+    block.type === 'list' ? (
+      <ul key={`list-${index}`} className="plan-response-list">
+        {block.items.map((item, itemIndex) => (
+          <li key={`item-${itemIndex}`}>{renderPlanText(item)}</li>
+        ))}
+      </ul>
+    ) : (
+      <p key={`paragraph-${index}`}>{renderPlanText(block.text)}</p>
+    )
+  ))
+}
+
 function PlanOverview({
   planResponse,
   narrativePlan,
@@ -99,7 +163,7 @@ function PlanOverview({
                 </div>
               </div>
             ) : onboardingPlan[key] ? (
-              <p className="plan-response">{onboardingPlan[key]}</p>
+              <div className="plan-response">{renderPlanContent(onboardingPlan[key])}</div>
             ) : (
               <p className="plan-window-empty">No narrative has been saved for this window yet.</p>
             )}
@@ -107,7 +171,7 @@ function PlanOverview({
         ))}
 
         {planResponse && !narrativePlan ? (
-          <p className="plan-response">{planResponse}</p>
+          <div className="plan-response">{renderPlanContent(planResponse)}</div>
         ) : (
           <p className="plan-subtext">
             Generate a plan to see your onboarding roadmap.

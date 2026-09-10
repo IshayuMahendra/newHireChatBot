@@ -127,11 +127,11 @@ class PlanForUserModel(BaseModel):
 
 
 class PlanNarrativeOutput(BaseModel):
-    week_1: str = Field(min_length=1, description="Narrative paragraph for Week 1.")
-    week_2_4: str = Field(min_length=1, description="Narrative paragraph for Week 2-4.")
-    day_30: str = Field(min_length=1, description="Narrative paragraph for Day 30.")
-    day_60: str = Field(min_length=1, description="Narrative paragraph for Day 60.")
-    day_90: str = Field(min_length=1, description="Narrative paragraph for Day 90.")
+    week_1: str = Field(min_length=1, description="Outcome sentence and bullet actions for Week 1.")
+    week_2_4: str = Field(min_length=1, description="Outcome sentence and bullet actions for Weeks 2-4.")
+    day_30: str = Field(min_length=1, description="Outcome sentence and bullet actions for Day 30.")
+    day_60: str = Field(min_length=1, description="Outcome sentence and bullet actions for Day 60.")
+    day_90: str = Field(min_length=1, description="Outcome sentence and bullet actions for Day 90.")
 
     @field_validator("week_1", "week_2_4", "day_30", "day_60", "day_90")
     @classmethod

@@ -192,8 +192,44 @@
   color: #1a1a1a;
 }
 
-.team-flag-detail {
+.team-flags-menu {
   margin-top: 12px;
+  border-top: 1px solid rgba(18, 28, 78, 0.12);
+}
+
+.team-flags-menu summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  cursor: pointer;
+  color: #121c4e;
+  font-size: 0.86rem;
+  font-weight: 800;
+  list-style: none;
+}
+
+.team-flags-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.team-flags-menu summary::after {
+  content: '>';
+  font-size: 1rem;
+  transition: transform 0.15s ease;
+}
+
+.team-flags-menu[open] summary::after {
+  transform: rotate(90deg);
+}
+
+.team-flags-list {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.team-flag-detail {
   padding-top: 10px;
   border-top: 1px solid rgba(18, 28, 78, 0.12);
 }

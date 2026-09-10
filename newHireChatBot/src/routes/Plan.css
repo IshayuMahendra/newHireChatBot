@@ -261,6 +261,21 @@
   font-size: 0.94rem;
 }
 
+.plan-response p {
+  margin: 8px 0 0;
+}
+
+.plan-response-list {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding-left: 1.25rem;
+}
+
+.plan-response-list li::marker {
+  color: #b50000;
+}
+
 .plan-window {
   padding: 12px 0;
   border-bottom: 1px solid rgba(18, 28, 78, 0.14);

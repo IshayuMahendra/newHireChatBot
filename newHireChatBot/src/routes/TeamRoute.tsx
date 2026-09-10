@@ -132,22 +132,31 @@ function TeamRoute({ currentUser, userRole, token }: TeamRouteProps) {
                 </div>
               </dl>
 
-              {user.flags.map((flag) => (
-                <div key={flag.id} className="team-flag-detail">
-                  <p>{flag.reason}</p>
-                  <button
-                    type="button"
-                    onClick={() => void handleFlagResolution(flag.id, !flag.resolved)}
-                    disabled={updatingFlagId === flag.id}
-                  >
-                    {updatingFlagId === flag.id
-                      ? 'Updating...'
-                      : flag.resolved
-                        ? 'Reopen flag'
-                        : 'Resolve flag'}
-                  </button>
-                </div>
-              ))}
+              <details className="team-flags-menu">
+                <summary>
+                  {user.flags.length ? `Flags (${user.flags.length})` : 'No flags currently'}
+                </summary>
+                {user.flags.length ? (
+                  <div className="team-flags-list">
+                    {user.flags.map((flag) => (
+                      <div key={flag.id} className="team-flag-detail">
+                        <p>{flag.reason}</p>
+                        <button
+                          type="button"
+                          onClick={() => void handleFlagResolution(flag.id, !flag.resolved)}
+                          disabled={updatingFlagId === flag.id}
+                        >
+                          {updatingFlagId === flag.id
+                            ? 'Updating...'
+                            : flag.resolved
+                              ? 'Reopen flag'
+                              : 'Resolve flag'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </details>
 
               <button
                 type="button"
