@@ -70,6 +70,8 @@ async def fetch_current_tasks_for_user(user_id: int, authorization: str, tasks_a
 
 async def save_narrative_plan(user_id: int, narrative_plan, authorization: str, tasks_api_base_url: str) -> None:
     plan_windows = {
+        "week1Outcome": narrative_plan.week_1,
+        "week2_4Outcome": narrative_plan.week_2_4,
         "plan30Day": narrative_plan.day_30,
         "plan60Day": narrative_plan.day_60,
         "plan90Day": narrative_plan.day_90,
