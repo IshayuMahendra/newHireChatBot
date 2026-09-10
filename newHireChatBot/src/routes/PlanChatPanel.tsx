@@ -18,6 +18,10 @@ type PlanChatPanelProps = {
   onGeneratePlan: () => Promise<void> | void
 }
 
+function formatCitation(source: string): string {
+  return source.replace(/\s*-\s*chunk\s+\d+\s*$/i, '').trim()
+}
+
 function PlanChatPanel({
   chatMessages,
   chatError,
@@ -55,8 +59,8 @@ function PlanChatPanel({
                 <div className="chat-citations" aria-label="Sources">
                   <strong>Sources</strong>
                   <ul>
-                    {message.sources.map((source, sourceIndex) => (
-                      <li key={`${source}-${sourceIndex}`}>{source}</li>
+                    {[...new Set(message.sources.map(formatCitation))].map((source) => (
+                      <li key={source}>{source}</li>
                     ))}
                   </ul>
                 </div>
