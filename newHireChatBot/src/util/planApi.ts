@@ -19,6 +19,8 @@ type PlanPayload = {
   onboarding_day: number
   current_tasks: string[]
   current_plan: {
+    planWeek1: string
+    planWeek2_4: string
     plan30Day: string
     plan60Day: string
     plan90Day: string
@@ -34,6 +36,8 @@ export async function generatePlan(
   onboardingDay: number,
   currentTasks: string[],
   currentPlan: {
+    planWeek1: string
+    planWeek2_4: string
     plan30Day: string
     plan60Day: string
     plan90Day: string

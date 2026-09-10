@@ -464,6 +464,26 @@
   color: #ffffff;
 }
 
+.chat-citations {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(18, 28, 78, 0.18);
+  font-size: 0.82rem;
+}
+
+.chat-citations strong {
+  display: block;
+}
+
+.chat-citations ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.chat-citations li + li {
+  margin-top: 2px;
+}
+
 .chat-empty-state {
   margin: 0;
   color: #5b648c;

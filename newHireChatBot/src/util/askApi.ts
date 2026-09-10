@@ -2,6 +2,7 @@ export type AskResult = {
   ok: boolean
   message: string
   response?: string
+  sources?: string[]
 }
 
 type AskPayload = {
@@ -55,7 +56,11 @@ export async function askAssistant(
       body: JSON.stringify(payload),
     })
 
-    const body = (await response.json()) as { response?: string; detail?: string }
+    const body = (await response.json()) as {
+      response?: string
+      detail?: string
+      rag?: { sources?: unknown }
+    }
 
     if (!response.ok || !body.response) {
       return {
@@ -68,6 +73,9 @@ export async function askAssistant(
       ok: true,
       message: 'Answer received.',
       response: body.response,
+      sources: Array.isArray(body.rag?.sources)
+        ? body.rag.sources.filter((source): source is string => typeof source === 'string')
+        : [],
     }
   } catch {
     return {

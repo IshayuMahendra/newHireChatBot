@@ -4,6 +4,7 @@ import './Plan.css'
 type ChatMessage = {
   sender: 'user' | 'assistant'
   text: string
+  sources?: string[]
 }
 
 type PlanChatPanelProps = {
@@ -49,7 +50,17 @@ function PlanChatPanel({
               key={`${message.sender}-${index}`}
               className={`chat-message ${message.sender}`}
             >
-              {message.text}
+              <span>{message.text}</span>
+              {message.sender === 'assistant' && message.sources?.length ? (
+                <div className="chat-citations" aria-label="Sources">
+                  <strong>Sources</strong>
+                  <ul>
+                    {message.sources.map((source, sourceIndex) => (
+                      <li key={`${source}-${sourceIndex}`}>{source}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ))
         )}

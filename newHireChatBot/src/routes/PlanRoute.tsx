@@ -74,6 +74,7 @@ type ApiTask = {
 type ChatMessage = {
   sender: 'user' | 'assistant'
   text: string
+  sources?: string[]
 }
 
 const PHASE_ORDER: Record<string, number> = {
@@ -387,44 +388,38 @@ function PlanRoute({
     })
   }, [selectedUser])
 
+  const loadSavedPlan = useCallback(async (targetUserId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${targetUserId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        return
+      }
+
+      const user = (await response.json()) as SelectedUser
+      setOnboardingPlan({
+        week1Outcome: user.week1Outcome ?? '',
+        week2_4Outcome: user.week2_4Outcome ?? '',
+        plan30Day: user.plan30Day ?? '',
+        plan60Day: user.plan60Day ?? '',
+        plan90Day: user.plan90Day ?? '',
+      })
+    } catch {
+      // Keep the current plan when the saved plan cannot be reloaded.
+    }
+  }, [token])
+
   useEffect(() => {
     if (loadingSelectedUser || !targetUser.id) {
       return
     }
 
-    let cancelled = false
-
-    async function loadSavedPlan() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/users/${targetUser.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (!response.ok || cancelled) {
-          return
-        }
-
-        const user = (await response.json()) as SelectedUser
-        setOnboardingPlan({
-          week1Outcome: user.week1Outcome ?? '',
-          week2_4Outcome: user.week2_4Outcome ?? '',
-          plan30Day: user.plan30Day ?? '',
-          plan60Day: user.plan60Day ?? '',
-          plan90Day: user.plan90Day ?? '',
-        })
-      } catch {
-        // Keep any plan data already supplied by the selected-user route state.
-      }
-    }
-
-    void loadSavedPlan()
-
-    return () => {
-      cancelled = true
-    }
-  }, [loadingSelectedUser, targetUser.id, token])
+    void loadSavedPlan(targetUser.id)
+  }, [loadingSelectedUser, targetUser.id, loadSavedPlan])
 
   async function handleGeneratePlan() {
     if (!userId) {
@@ -451,6 +446,8 @@ function PlanRoute({
       1,
       buildPlanTaskPayload(pendingTasks, completedTasks),
       {
+        planWeek1: onboardingPlan.week1Outcome,
+        planWeek2_4: onboardingPlan.week2_4Outcome,
         plan30Day: onboardingPlan.plan30Day,
         plan60Day: onboardingPlan.plan60Day,
         plan90Day: onboardingPlan.plan90Day,
@@ -681,8 +678,16 @@ function PlanRoute({
       {
         sender: 'assistant',
         text: result.response ?? '',
+        sources: result.sources,
       },
     ])
+
+    if (targetUser.id) {
+      await Promise.all([
+        loadTasks(targetUser.id),
+        loadSavedPlan(targetUser.id),
+      ])
+    }
   }
 
   return (

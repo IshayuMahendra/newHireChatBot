@@ -18,8 +18,14 @@ type ActivityEvent = {
   timestamp: string
 }
 
-type ApiTask = { completed?: boolean }
+type ApiTask = { text: string; completed?: boolean }
 type SelectedUser = { id: number; username: string; role: string; department: string }
+
+type Milestone = {
+  label: string
+  description: string
+  status: 'complete' | 'active' | 'upcoming'
+}
 
 const API_BASE_URL = 'http://localhost:3001'
 
@@ -32,6 +38,11 @@ function formatEventType(type: string): string {
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp)
   return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleString()
+}
+
+function getTaskPhase(taskText: string): string {
+  const match = taskText.match(/^\[(.+?)\]/)
+  return match?.[1]?.trim() ?? 'Task'
 }
 
 function DashboardRoute({
@@ -126,6 +137,36 @@ function DashboardRoute({
   const planPath = targetUserId && canManageDashboard
     ? `/plan?userId=${targetUserId}`
     : '/plan'
+  const milestoneDefinitions = [
+    { label: 'Week 1', phases: ['Week 1'] },
+    { label: 'Weeks 2-4', phases: ['Weeks 2-4', 'Week 2-4'] },
+    { label: 'First 30 Days', phases: ['Day 30', '30 Days'] },
+    { label: 'Days 31-60', phases: ['Day 60', '60 Days'] },
+    { label: 'Days 61-90', phases: ['Day 90', '90 Days'] },
+  ]
+  let hasActiveMilestone = false
+  const milestones: Milestone[] = milestoneDefinitions.map((milestone) => {
+    const phaseTasks = tasks.filter((task) => milestone.phases.includes(getTaskPhase(task.text)))
+    const completedPhaseTasks = phaseTasks.filter((task) => task.completed).length
+    const isComplete = phaseTasks.length > 0 && completedPhaseTasks === phaseTasks.length
+    const status = isComplete
+      ? 'complete'
+      : !hasActiveMilestone && phaseTasks.length > 0
+        ? 'active'
+        : 'upcoming'
+
+    if (status === 'active') {
+      hasActiveMilestone = true
+    }
+
+    return {
+      label: milestone.label,
+      description: phaseTasks.length
+        ? `${completedPhaseTasks} of ${phaseTasks.length} tasks complete`
+        : 'No tasks assigned yet',
+      status,
+    }
+  })
 
   return (
     <section className="dashboard-shell">
@@ -158,18 +199,15 @@ function DashboardRoute({
             <button type="button" onClick={() => navigate(planPath)}>View Plan</button>
           </div>
           <div className="milestone-list">
-            <article className="milestone complete">
-              <span>1</span>
-              <div><strong>Get set up</strong><p>Accounts and equipment are ready.</p></div>
-            </article>
-            <article className="milestone active">
-              <span>2</span>
-              <div><strong>Build team context</strong><p>Meet your manager and key partners.</p></div>
-            </article>
-            <article className="milestone">
-              <span>3</span>
-              <div><strong>First 30 days</strong><p>Grow into your role and core responsibilities.</p></div>
-            </article>
+            {milestones.map((milestone, index) => (
+              <article key={milestone.label} className={`milestone ${milestone.status}`}>
+                <span>{index + 1}</span>
+                <div>
+                  <strong>{milestone.label}</strong>
+                  <p>{milestone.description}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
