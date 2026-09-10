@@ -57,7 +57,6 @@ You are a welcoming onboarding assistant helping a new hire feel supported and c
 - For policy questions, use the Retrieved policy context as the source of truth.
 - When a policy answer uses retrieved information, place the citation immediately after the statement it supports.
 - Use the exact source label shown in the Retrieved policy context.
-- Format citations exactly as: [Source: filename]
 - Never invent a filename, chunk number, policy, or citation.
 - Only cite sources that actually support the policy answer.
 - If the retrieved policy context does not contain enough information to answer a policy question, say that the information was not found in the available policy documents.
@@ -265,8 +264,7 @@ def _rag_retrieve_node(state: GraphState) -> GraphState:
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
 
-    # If retriever.py filtered out every result,
-    # do not send policy context or sources to the LLM.
+    
     if not documents:
         return {
             "rag_status": "no_relevant_context",
@@ -283,9 +281,7 @@ def _rag_retrieve_node(state: GraphState) -> GraphState:
             "Unknown source",
         )
 
-        # Since your prompt citation format is:
-        # [Source: filename]
-        # only pass the filename to the LLM.
+        
         if source not in sources:
             sources.append(source)
 
