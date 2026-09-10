@@ -323,6 +323,9 @@ def main():
             ][:10]
         )
 
+        print("REPO_ROOT:", REPO_ROOT)
+        print("CHROMA_DIR:", CHROMA_DIR)
+
 
 if __name__ == "__main__":
     main()

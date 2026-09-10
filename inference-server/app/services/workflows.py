@@ -244,7 +244,9 @@ def _gather_context_node(state: GraphState) -> GraphState:
 
 
 def _rag_retrieve_node(state: GraphState) -> GraphState:
-    question = str(state.get("user_prompt", "")).strip()
+    question = str(
+        state.get("user_prompt", "")
+    ).strip()
 
     if not question:
         return {
@@ -263,17 +265,28 @@ def _rag_retrieve_node(state: GraphState) -> GraphState:
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
 
+    # If retriever.py filtered out every result,
+    # do not send policy context or sources to the LLM.
+    if not documents:
+        return {
+            "rag_status": "no_relevant_context",
+            "rag_confidence": 0.0,
+            "rag_sources": [],
+            "rag_chunks": [],
+        }
+
     sources = []
 
     for metadata in metadatas:
-        source = metadata.get("source", "Unknown source")
-        chunk = metadata.get("chunk")
+        source = metadata.get(
+            "source",
+            "Unknown source",
+        )
 
-        if chunk is not None:
-            sources.append(
-                f"{source} - chunk {chunk}"
-            )
-        else:
+        # Since your prompt citation format is:
+        # [Source: filename]
+        # only pass the filename to the LLM.
+        if source not in sources:
             sources.append(source)
 
     return {
