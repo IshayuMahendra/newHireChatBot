@@ -5,11 +5,17 @@ export type AskResult = {
   sources?: string[]
 }
 
+export type AskHistoryMessage = {
+  sender: 'user' | 'assistant'
+  text: string
+}
+
 type AskPayload = {
   role: string
   department: string
   user_prompt: string
   current_tasks: string[]
+  chat_history: string[]
 }
 
 const ASK_API_URL = 'http://127.0.0.1:8000/ask'
@@ -19,13 +25,19 @@ export async function askAssistant(
   department: string,
   userPrompt: string,
   currentTasks: string[],
+  chatMessages: AskHistoryMessage[],
   token: string,
 ): Promise<AskResult> {
+  const history = chatMessages
+    .map((message) => `${message.sender === 'user' ? 'User' : 'Assistant'}: ${message.text.trim()}`)
+    .filter((entry) => entry !== 'User:' && entry !== 'Assistant:')
+
   const payload: AskPayload = {
     role: role.trim(),
     department: department.trim(),
     user_prompt: userPrompt.trim(),
     current_tasks: currentTasks,
+    chat_history: history,
   }
 
   if (!payload.user_prompt) {

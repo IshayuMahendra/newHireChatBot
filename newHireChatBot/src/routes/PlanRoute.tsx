@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { askAssistant } from '../util/askApi.ts'
+import type { AskHistoryMessage } from '../util/askApi.ts'
 import { generatePlan } from '../util/planApi'
 import './Plan.css'
 import PlanOverview from './PlanOverview'
@@ -72,9 +73,7 @@ type ApiTask = {
   createdAt?: string
 }
 
-type ChatMessage = {
-  sender: 'user' | 'assistant'
-  text: string
+type ChatMessage = AskHistoryMessage & {
   sources?: string[]
 }
 
@@ -713,6 +712,7 @@ function PlanRoute({
       department,
       trimmedPrompt,
       buildTaskContext(pendingTasks, completedTasks),
+      [...chatMessages, { sender: 'user', text: trimmedPrompt }],
       token,
     )
 

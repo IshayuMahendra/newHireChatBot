@@ -38,6 +38,10 @@ class AskModel(BaseModel):
         default_factory=dict,
         description="Current narrative plan keyed by section labels: planWeek1, planWeek2_4, plan30Day, plan60Day, plan90Day. Legacy aliases week_1, week_2_4, day_30, day_60, day_90 are also accepted."
     )
+    chat_history: list[str] = Field(
+        default_factory=list,
+        description="Prior chat turns for this conversation in display order. Each entry should include speaker and message text.",
+    )
 
     @field_validator("role", "department", "user_prompt")
     @classmethod
@@ -56,6 +60,11 @@ class AskModel(BaseModel):
     @classmethod
     def validate_current_plan(cls, value: dict[str, str]) -> dict[str, str]:
         return normalize_plan_keys(value)
+
+    @field_validator("chat_history")
+    @classmethod
+    def validate_chat_history(cls, value: list[str]) -> list[str]:
+        return [item.strip() for item in value if item and item.strip()]
 
 
 class PlanModel(BaseModel):
@@ -174,6 +183,7 @@ class GraphState(TypedDict, total=False):
     onboarding_day: int
     current_tasks: list[str]
     current_plan: dict[str, str]
+    chat_history: list[str]
     user_id: int
     token: str
     rag_status: str
