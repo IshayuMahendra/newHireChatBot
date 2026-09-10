@@ -202,14 +202,14 @@ def _route_workflow(state: GraphState) -> str:
 
 
 def _generate_ask_node(state: GraphState) -> GraphState:
-    model = ChatOpenAI(model=MODEL_NAME)
+    model = ChatOpenAI(model=MODEL_NAME, reasoning_effort="none")
     chain = ASK_PROMPT_TEMPLATE | model | StrOutputParser()
     response = chain.invoke(_build_prompt_payload(state))
     return {"response": response}
 
 
 def _generate_plan_node(state: GraphState) -> GraphState:
-    model = ChatOpenAI(model=MODEL_NAME)
+    model = ChatOpenAI(model=MODEL_NAME, reasoning_effort="none")
     prompt_payload = _build_prompt_payload(state)
     narrative_sections_chain = PLAN_NARRATIVE_PROMPT_TEMPLATE | model.with_structured_output(PlanNarrativeOutput)
     structured_chain = PLAN_STRUCTURED_PROMPT_TEMPLATE | model.with_structured_output(PlanStructuredOutput)

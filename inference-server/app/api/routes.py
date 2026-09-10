@@ -29,6 +29,7 @@ async def ask(
     try:
         ask_request = request
 
+        user_id: int | None = None
         if normalized_auth:
             token_payload = decode_token_payload_without_verification(normalized_auth)
             user_id = token_payload.get("id")
@@ -36,7 +37,7 @@ async def ask(
                 current_tasks = await fetch_current_tasks_for_user(user_id, normalized_auth, TASKS_API_BASE_URL)
                 ask_request = request.model_copy(update={"current_tasks": current_tasks})
 
-        ask_result = invoke_AskWorkflow(ask_request)
+        ask_result = invoke_AskWorkflow(ask_request, user_id=user_id, token=normalized_auth)
         return {
             "response": str(ask_result.get("response", "")),
             "rag": {

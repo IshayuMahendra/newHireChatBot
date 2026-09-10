@@ -1,5 +1,6 @@
 from typing import Any, TypedDict
 
+from langchain_core.messages import ToolMessage
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
@@ -173,10 +174,15 @@ class GraphState(TypedDict, total=False):
     onboarding_day: int
     current_tasks: list[str]
     current_plan: dict[str, str]
+    user_id: int
+    token: str
     rag_status: str
     rag_confidence: float
     rag_sources: list[str]
     rag_chunks: list[dict[str, Any]]
     response: str
+    tool_calls: list[dict[str, Any]]
+    tool_results: list[str]
+    messages: list[ToolMessage]
     narrative_plan: PlanNarrativeOutput
     structured_plan: PlanStructuredOutput
