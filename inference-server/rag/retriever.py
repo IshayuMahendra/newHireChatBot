@@ -3,8 +3,10 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 CHROMA_DIR = Path(
-    "C:\\Users\\labadmin\\Documents\\Capstone\\newHireChatBot\\chroma_db"
+    REPO_ROOT / "chroma_db"
 )
 
 

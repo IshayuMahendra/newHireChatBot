@@ -8,12 +8,14 @@ from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 POLICY_DIR = Path(
-    "C:\\Users\\labadmin\\Documents\\Capstone\\newHireChatBot\\pdf_policies"
+    REPO_ROOT / "pdf_policies"
 )
 
 CHROMA_DIR = Path(
-    "C:\\Users\\labadmin\\Documents\\Capstone\\newHireChatBot\\chroma_db"
+    REPO_ROOT / "chroma_db"
 )
 
 
@@ -69,6 +71,12 @@ def main():
     print(
         f"Found {len(pdf_files)} PDF files."
     )
+
+    if not pdf_files:
+        raise FileNotFoundError(
+            f"No PDF files found in {POLICY_DIR}. "
+            "Update POLICY_DIR or add policy PDFs before running ingest."
+        )
 
     all_chunks = []
 
@@ -134,6 +142,12 @@ def main():
     print(
         f"\nTotal chunks: {len(all_chunks)}"
     )
+
+    if not all_chunks:
+        raise ValueError(
+            "No text chunks were created from the policy PDFs. "
+            "Check that the files contain extractable text."
+        )
 
     
     #Create embeddings

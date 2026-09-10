@@ -4,15 +4,17 @@ node_modules/
 
 # Local database files
 data/db/
+chroma_db/
+inference-server/rag/chroma_db/
 playground.mongodb.js
 .env
 
-# Inference server local env files
-inference-server/.env
-inference-server/.env.*
-
-# Inference server virtual environment
-inference-server/.venv/
+# Virtual environments and generated Python runtime artifacts
+.venv/
+**/.venv/
+**/*.egg-info/
+**/__pycache__/
+*.py[cod]
 
 # Python tooling caches
 .pytest_cache/
@@ -21,9 +23,10 @@ inference-server/.venv/
 .coverage
 htmlcov/
 
-# Python cache artifacts
-__pycache__/
-*.py[cod]
+# Local environment files
+.env
+**/.env
+**/.env.*
 
 # Local Python interpreter pin
 .python-version
