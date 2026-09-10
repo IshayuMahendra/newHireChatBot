@@ -1,15 +1,22 @@
 from dotenv import load_dotenv
+from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
 from app.schemas.onboarding import AskModel, GraphState, PlanModel, PlanNarrativeOutput, PlanStructuredOutput
+from app.services.tools import AGENT_TOOLS, TOOL_LOOKUP
 from rag.retriever import retrieve
 
 MODEL_NAME = "gpt-5.6-luna"
 
 load_dotenv()
+
+
+def _build_chat_model(*, tools: list | None = None):
+    model = ChatOpenAI(model=MODEL_NAME, reasoning_effort="none")
+    return model.bind_tools(tools) if tools is not None else model
 
 ASK_PROMPT_TEMPLATE = PromptTemplate.from_template(
     """# New Hire Assistant
@@ -270,14 +277,72 @@ def _route_workflow(state: GraphState) -> str:
 
 
 def _generate_ask_node(state: GraphState) -> GraphState:
-    model = ChatOpenAI(model=MODEL_NAME)
-    chain = ASK_PROMPT_TEMPLATE | model | StrOutputParser()
-    response = chain.invoke(_build_prompt_payload(state))
-    return {"response": response}
+    model = _build_chat_model(tools=AGENT_TOOLS)
+    payload = _build_prompt_payload(state)
+    response = model.invoke(
+        [
+            {
+                "role": "user",
+                "content": ASK_PROMPT_TEMPLATE.format(**payload),
+            }
+        ]
+    )
+
+    tool_calls = getattr(response, "tool_calls", None) or []
+    return {
+        "response": getattr(response, "content", "") or "",
+        "tool_calls": list(tool_calls),
+    }
+
+
+def _execute_tool_node(state: GraphState) -> GraphState:
+    tool_results: list[str] = []
+    messages: list[ToolMessage] = []
+    user_id = state.get("user_id")
+    token = state.get("token")
+    current_tasks = state.get("current_tasks", []) or []
+    user_prompt = state.get("user_prompt", "")
+
+    for tool_call in state.get("tool_calls", []) or []:
+        name = tool_call.get("name")
+        arguments = dict(tool_call.get("args", {}) or {})
+        if user_id is not None:
+            arguments["user_id"] = user_id
+        if token is not None:
+            arguments["token"] = token
+        if "current_tasks" not in arguments:
+            arguments["current_tasks"] = current_tasks
+        if "user_prompt" not in arguments:
+            arguments["user_prompt"] = user_prompt
+
+        tool_fn = TOOL_LOOKUP.get(name)
+        if tool_fn is None:
+            tool_results.append(f"Tool '{name}' is not available.")
+            continue
+
+        try:
+            result = tool_fn.invoke(arguments)
+            tool_results.append(str(result))
+            if tool_call.get("id"):
+                messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"], name=name))
+        except Exception as exc:  # pragma: no cover - guard against runtime tool failures
+            tool_results.append(f"Tool '{name}' failed: {exc}")
+
+    joined = "\n".join(tool_results) if tool_results else "No tools executed."
+    return {
+        "response": joined,
+        "tool_results": tool_results,
+        "messages": messages,
+    }
+
+
+def _route_after_agent(state: GraphState) -> str:
+    tool_calls = state.get("tool_calls") or []
+    return "execute_tools" if tool_calls else END
 
 
 def _generate_plan_node(state: GraphState) -> GraphState:
-    model = ChatOpenAI(model=MODEL_NAME)
+    model = _build_chat_model()
     prompt_payload = _build_prompt_payload(state)
     narrative_sections_chain = PLAN_NARRATIVE_PROMPT_TEMPLATE | model.with_structured_output(PlanNarrativeOutput)
     structured_chain = PLAN_STRUCTURED_PROMPT_TEMPLATE | model.with_structured_output(PlanStructuredOutput)
@@ -297,20 +362,29 @@ def _build_graph():
     builder.add_node("gather_context", _gather_context_node)
     builder.add_node("rag_retrieve", _rag_retrieve_node)
     builder.add_node("generate_ask", _generate_ask_node)
+    builder.add_node("execute_tools", _execute_tool_node)
     builder.add_node("generate_plan", _generate_plan_node)
 
     builder.add_edge(START, "gather_context")
     builder.add_edge("gather_context", "rag_retrieve")
-    
+
     builder.add_conditional_edges(
-    "rag_retrieve",
-    _route_workflow,
-    {
-        "generate_ask": "generate_ask",
-        "generate_plan": "generate_plan",
-    },
-)
-    builder.add_edge("generate_ask", END)
+        "rag_retrieve",
+        _route_workflow,
+        {
+            "generate_ask": "generate_ask",
+            "generate_plan": "generate_plan",
+        },
+    )
+    builder.add_conditional_edges(
+        "generate_ask",
+        _route_after_agent,
+        {
+            "execute_tools": "execute_tools",
+            END: END,
+        },
+    )
+    builder.add_edge("execute_tools", END)
     builder.add_edge("generate_plan", END)
     return builder.compile()
 
@@ -331,7 +405,7 @@ def invoke_PlanWorkflow(ctx: PlanModel) -> GraphState:
     )
 
 
-def invoke_AskWorkflow(ctx: AskModel) -> GraphState:
+def invoke_AskWorkflow(ctx: AskModel, user_id: int | None = None, token: str | None = None) -> GraphState:
     return WORKFLOW_GRAPH.invoke(
         {
             "workflow": "ask",
@@ -341,5 +415,7 @@ def invoke_AskWorkflow(ctx: AskModel) -> GraphState:
             "onboarding_day": ctx.onboarding_day,
             "current_tasks": ctx.current_tasks,
             "current_plan": ctx.current_plan,
+            "user_id": user_id,
+            "token": token,
         }
     )
