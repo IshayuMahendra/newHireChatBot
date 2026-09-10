@@ -4,19 +4,11 @@
   place-items: center;
   position: relative;
   padding: 24px 16px;
-  background: #ffffff;
+  background: #34383d;
 }
 
 .login-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    -28deg,
-    rgba(10, 26, 102, 0.22) 0 56px,
-    transparent 56px 112px
-  );
-  z-index: 0;
+  content: none;
 }
 
 .login-page > * {
@@ -25,13 +17,13 @@
 }
 
 .login-panel {
-  width: min(520px, 100%);
-  background: #d0271d;
+  width: min(680px, 100%);
+  background: #b50000;
   color: #ffffff;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 20px 36px rgba(0, 0, 0, 0.3);
-  padding: 28px 24px;
+  padding: 40px 36px;
 }
 
 .login-panel h1 {
@@ -81,7 +73,7 @@
 }
 
 .login-actions button.secondary {
-  background: #8e2118;
+  background: #de0000;
 }
 
 .login-actions button:disabled {
@@ -102,7 +94,7 @@
 }
 
 .status.error {
-  background: #7f1b15;
+  background: #b50000;
   color: #ffffff;
 }
 
