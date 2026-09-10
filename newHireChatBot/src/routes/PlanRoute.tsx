@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { askAssistant } from '../util/askApi.ts'
@@ -239,6 +239,8 @@ function PlanRoute({
   const [chatError, setChatError] = useState('')
 
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
+  const [hasLoadedSavedPlan, setHasLoadedSavedPlan] = useState(false)
+  const automaticPlanAttemptedForUserId = useRef<number | null>(null)
   const [planStatus, setPlanStatus] = useState('')
   const [planResponse, setPlanResponse] = useState('')
   const [narrativePlan, setNarrativePlan] = useState<NarrativePlan | null>(null)
@@ -402,7 +404,7 @@ function PlanRoute({
       })
 
       if (!response.ok) {
-        return
+        return false
       }
 
       const user = (await response.json()) as SelectedUser
@@ -413,17 +415,31 @@ function PlanRoute({
         plan60Day: user.plan60Day ?? '',
         plan90Day: user.plan90Day ?? '',
       })
+      return true
     } catch {
       // Keep the current plan when the saved plan cannot be reloaded.
+      return false
     }
   }, [token])
 
   useEffect(() => {
     if (loadingSelectedUser || !targetUser.id) {
+      setHasLoadedSavedPlan(false)
       return
     }
 
-    void loadSavedPlan(targetUser.id)
+    let cancelled = false
+    setHasLoadedSavedPlan(false)
+
+    void loadSavedPlan(targetUser.id).then((loaded) => {
+      if (!cancelled) {
+        setHasLoadedSavedPlan(loaded)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [loadingSelectedUser, targetUser.id, loadSavedPlan])
 
   async function handleGeneratePlan() {
@@ -484,6 +500,34 @@ function PlanRoute({
     setPlanStatus(result.message)
     setIsGeneratingPlan(false)
   }
+
+  useEffect(() => {
+    const hasSavedPlan = Object.values(onboardingPlan).some(
+      (window) => Boolean(window.trim()),
+    )
+
+    if (
+      canManageTasks
+      || !hasLoadedSavedPlan
+      || loadingTasks
+      || !userId
+      || hasSavedPlan
+      || isGeneratingPlan
+      || automaticPlanAttemptedForUserId.current === userId
+    ) {
+      return
+    }
+
+    automaticPlanAttemptedForUserId.current = userId
+    void handleGeneratePlan()
+  }, [
+    canManageTasks,
+    hasLoadedSavedPlan,
+    loadingTasks,
+    onboardingPlan,
+    userId,
+    isGeneratingPlan,
+  ])
 
   async function completeTask(
     taskId: number,
@@ -741,13 +785,26 @@ function PlanRoute({
             chatError={chatError}
             chatInput={chatInput}
             isAsking={isAsking}
-            isGeneratingPlan={isGeneratingPlan}
             onChatInputChange={setChatInput}
             onAsk={handleAsk}
-            onGeneratePlan={handleGeneratePlan}
           />
         ) : null}
       </main>
+
+      {isGeneratingPlan ? (
+        <div className="plan-generation-overlay">
+          <section
+            className="plan-generation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="plan-generation-title"
+          >
+            <span className="plan-generation-spinner" aria-hidden="true" />
+            <h2 id="plan-generation-title">Generating your onboarding plan</h2>
+            <p>Creating your personalized tasks and milestones.</p>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }

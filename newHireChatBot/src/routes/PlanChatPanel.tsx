@@ -12,10 +12,8 @@ type PlanChatPanelProps = {
   chatError: string
   chatInput: string
   isAsking: boolean
-  isGeneratingPlan: boolean
   onChatInputChange: (value: string) => void
   onAsk: (event: FormEvent<HTMLFormElement>) => void
-  onGeneratePlan: () => Promise<void> | void
 }
 
 function formatCitation(source: string): string {
@@ -27,10 +25,8 @@ function PlanChatPanel({
   chatError,
   chatInput,
   isAsking,
-  isGeneratingPlan,
   onChatInputChange,
   onAsk,
-  onGeneratePlan,
 }: PlanChatPanelProps) {
   return (
     <section
@@ -45,9 +41,10 @@ function PlanChatPanel({
         aria-live="polite"
       >
         {chatMessages.length === 0 ? (
-          <p className="chat-empty-state">
-            Chat messages will appear here.
-          </p>
+          <div className="chat-empty-state">
+            <p>Hi, I&apos;m your onboarding assistant. Ask me anything as you get started.</p>
+            <p>I can help you understand your tasks and onboarding plan, answer questions about the process, and point you to relevant policy sources.</p>
+          </div>
         ) : (
           chatMessages.map((message, index) => (
             <div
@@ -92,16 +89,6 @@ function PlanChatPanel({
         />
 
         <div className="chat-button-row">
-          <button
-            type="button"
-            disabled={isGeneratingPlan || isAsking}
-            onClick={() => void onGeneratePlan()}
-          >
-            {isGeneratingPlan
-              ? 'Planning...'
-              : 'Plan'}
-          </button>
-
           <button
             type="submit"
             disabled={isAsking}
