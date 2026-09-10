@@ -49,6 +49,7 @@ export const taskRepository = {
             id: taskId,
             userId: user._id,
             completed,
+            completedAt: completed ? new Date() : null,
             createdAt: newTask.createdAt ? new Date(newTask.createdAt) : new Date()
         };
 
@@ -59,7 +60,12 @@ export const taskRepository = {
     async updateTaskCompletion(taskId, completed) {
         await taskCollection.updateOne(
             { id: taskId },
-            { $set: { completed } }
+            {
+                $set: {
+                    completed,
+                    completedAt: completed ? new Date() : null
+                }
+            }
         );
         return await taskCollection.findOne({ id: taskId });
     },

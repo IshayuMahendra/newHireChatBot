@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { jwtDecode } from 'jwt-decode'
 import HomeRoute from './routes/HomeRoute.tsx'
 import LoginRoute from './routes/LoginRoute.tsx'
 import RegisterRoute from './routes/RegisterRoute.tsx'
@@ -27,6 +28,19 @@ const EMPTY_SESSION: AuthSession = {
   userType: '',
 }
 
+function hasValidSessionToken(token?: string): boolean {
+  if (!token) {
+    return false
+  }
+
+  try {
+    const { exp } = jwtDecode<{ exp?: number }>(token)
+    return typeof exp === 'number' && exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+}
+
 function App() {
   const [session, setSession] = useState<AuthSession>(() => {
     try {
@@ -51,15 +65,18 @@ function App() {
     }
   })
 
-  const isAuthenticated = Boolean(
-    session.token || session.userId || session.username,
-  )
+  const isAuthenticated = hasValidSessionToken(session.token)
 
   const isManager = session.userType === 'manager'
 
   useEffect(() => {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
-  }, [session])
+    if (isAuthenticated) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+      return
+    }
+
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+  }, [isAuthenticated, session])
 
   function clearSession() {
     setSession(EMPTY_SESSION)

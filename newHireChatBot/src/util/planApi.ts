@@ -27,7 +27,7 @@ type PlanPayload = {
   }
 }
 
-const PLAN_API_URL = 'http://127.0.0.1:8000/plan'
+const PLAN_API_BASE_URL = 'http://127.0.0.1:8000/plan'
 
 export async function generatePlan(
   userId: number,
@@ -43,6 +43,7 @@ export async function generatePlan(
     plan90Day: string
   },
   token: string,
+  updateExistingPlan: boolean,
 ): Promise<PlanResult> {
   const payload: PlanPayload = {
     user_id: userId,
@@ -69,14 +70,17 @@ export async function generatePlan(
   }
 
   try {
-    const response = await fetch(PLAN_API_URL, {
+    const response = await fetch(
+      updateExistingPlan ? `${PLAN_API_BASE_URL}/update` : PLAN_API_BASE_URL,
+      {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
-    })
+      },
+    )
 
     const body = (await response.json()) as {
       detail?: string
@@ -100,7 +104,9 @@ export async function generatePlan(
 
     return {
       ok: true,
-      message: 'Plan generated and tasks saved.',
+      message: updateExistingPlan
+        ? 'Plan updated and tasks synchronized.'
+        : 'Plan generated and tasks saved.',
       taskCount: body.task_count,
       response: body.response,
       narrativePlan: body.narrative_plan,

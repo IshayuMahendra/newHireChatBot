@@ -68,6 +68,7 @@ type ApiTask = {
   id: number
   text: string
   completed?: boolean
+  completedAt?: string
   createdAt?: string
 }
 
@@ -80,9 +81,13 @@ type ChatMessage = {
 const PHASE_ORDER: Record<string, number> = {
   'Week 1': 1,
   'Weeks 2-4': 2,
+  'Week 2-4': 2,
   'Day 30': 3,
+  '30 Days': 3,
   'Day 60': 4,
+  '60 Days': 4,
   'Day 90': 5,
+  '90 Days': 5,
 }
 
 const API_BASE_URL = 'http://localhost:3001'
@@ -345,7 +350,7 @@ function PlanRoute({
             id: task.id,
             ...parseTaskText(task.text),
             due: 'Completed',
-            completedOn: formatCompletedDate(task.createdAt),
+            completedOn: formatCompletedDate(task.completedAt ?? task.createdAt),
           }))
           .sort(compareTaskPhase)
 
@@ -453,6 +458,7 @@ function PlanRoute({
         plan90Day: onboardingPlan.plan90Day,
       },
       token,
+      Object.values(onboardingPlan).some((window) => Boolean(window.trim())),
     )
 
     if (!result.ok) {
