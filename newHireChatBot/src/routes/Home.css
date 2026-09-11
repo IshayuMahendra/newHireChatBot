@@ -108,6 +108,7 @@
 	max-width: 56ch;
 	margin: 0 auto;
 	text-align: center;
+	font-size: clamp(1rem, 2.5vw, 1.2rem);
 }
 
 .landing-shell-light .landing-subtext {
